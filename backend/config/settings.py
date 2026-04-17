@@ -15,7 +15,7 @@ def _load_env_file():
             continue
 
         for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
+            line = raw_line.strip().lstrip("\ufeff")
             if not line or line.startswith("#") or "=" not in line:
                 continue
 
@@ -38,6 +38,15 @@ def _get_bool_env(name, default=False):
 
 def _get_csv_env(name, default=""):
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+
+
+def _get_required_env(name):
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise ImproperlyConfigured(
+            f"Defina a variavel de ambiente obrigatoria {name}."
+        )
+    return value
 
 
 def _postgres_database_config_from_url(database_url):
@@ -99,11 +108,16 @@ def _build_database_config():
 
 _load_env_file()
 
-SECRET_KEY = os.getenv(
-    "DJANGO_SECRET_KEY",
+SECRET_KEY = _get_required_env("DJANGO_SECRET_KEY")
+if SECRET_KEY in {
     "django-insecure-dev-only-key-change-in-production",
-)
-DEBUG = _get_bool_env("DJANGO_DEBUG", True)
+    "replace-me-with-a-unique-secret-key",
+}:
+    raise ImproperlyConfigured(
+        "Defina DJANGO_SECRET_KEY com um valor exclusivo e secreto."
+    )
+
+DEBUG = _get_bool_env("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = _get_csv_env("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CORS_ALLOWED_ORIGINS = _get_csv_env(
     "DJANGO_CORS_ALLOWED_ORIGINS",
