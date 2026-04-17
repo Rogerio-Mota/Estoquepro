@@ -4,3 +4,23 @@
 !.env.example
 !backend/.env.example
 !frontend/.env.example
+
+# Python cache and local environments
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+backend/venv/
+
+# Local databases and generated files
+*.sqlite3
+backend/backups/
+backend/tmp-test-runs/
+backend/media/
+
+# Node dependencies and build outputs
+node_modules/
+dist/
+dist-ssr/
