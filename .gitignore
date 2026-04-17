@@ -1,11 +1,11 @@
-# Local secrets
+# Segredos locais
 .env
 .env.*
 !.env.example
 !backend/.env.example
 !frontend/.env.example
 
-# Python cache and local environments
+# Cache Python e ambientes locais
 **/__pycache__/
 *.py[cod]
 .pytest_cache/
@@ -14,13 +14,13 @@
 venv/
 backend/venv/
 
-# Local databases and generated files
+# Bancos locais e arquivos gerados
 *.sqlite3
 backend/backups/
 backend/tmp-test-runs/
 backend/media/
 
-# Node dependencies and build outputs
+# Dependencias Node e artefatos de build
 node_modules/
 dist/
 dist-ssr/
