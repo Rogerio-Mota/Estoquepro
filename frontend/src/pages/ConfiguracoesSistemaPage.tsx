@@ -112,7 +112,7 @@ export default function ConfiguracoesSistemaPage() {
       }));
       toast.success(successMessage);
     } catch (error) {
-      toast.error(error.message || "NÃ£o foi possÃ­vel identificar a paleta da logo.");
+      toast.error(error.message || "Não foi possível identificar a paleta da logo.");
     } finally {
       setAnalisandoLogo(false);
     }
@@ -168,7 +168,7 @@ export default function ConfiguracoesSistemaPage() {
       ...buildFormFromConfig(DEFAULT_SYSTEM_CONFIG),
       remover_logo: true,
     });
-    toast.info("Tema padrÃ£o carregado para revisÃ£o.");
+    toast.info("Tema padrão carregado para revisão.");
   }
 
   async function handleSubmit(event) {
@@ -197,10 +197,10 @@ export default function ConfiguracoesSistemaPage() {
       setLogoFile(null);
       revokePreview(logoPreview);
       setLogoPreview(null);
-      toast.success("ConfiguraÃ§Ãµes atualizadas com sucesso.");
+      toast.success("Configurações atualizadas com sucesso.");
     } catch (error) {
-      setErro(error.message || "Erro ao atualizar as configuraÃ§Ãµes.");
-      toast.error(error.message || "Erro ao atualizar as configuraÃ§Ãµes.");
+      setErro(error.message || "Erro ao atualizar as configurações.");
+      toast.error(error.message || "Erro ao atualizar as configurações.");
     } finally {
       setSalvando(false);
     }
@@ -208,17 +208,17 @@ export default function ConfiguracoesSistemaPage() {
 
   if (user?.tipo !== "admin") {
     return (
-      <Layout title="ConfiguraÃ§Ãµes">
+      <Layout title="Configurações">
         <AccessNotice>Acesso restrito ao administrador.</AccessNotice>
       </Layout>
     );
   }
 
   return (
-    <Layout title="ConfiguraÃ§Ãµes">
+    <Layout title="Configurações">
       <div className="form-shell form-shell--wide">
         <PageHeader
-          title="ConfiguraÃ§Ãµes do sistema"
+          title="Configurações do sistema"
           description="Defina nome, logo e cores principais do sistema de forma simples."
           action={
             <div className="table-actions">
@@ -227,7 +227,7 @@ export default function ConfiguracoesSistemaPage() {
                 className="button-secondary"
                 onClick={handleRestoreDefaults}
               >
-                Tema padrÃ£o
+                Tema padrão
               </button>
               {hasUnsavedChanges ? (
                 <button
@@ -247,7 +247,7 @@ export default function ConfiguracoesSistemaPage() {
         <div className="dashboard-grid settings-grid settings-grid--simple">
           <form className="page-card form-card" onSubmit={handleSubmit}>
             <div className="form-section">
-              <h3 className="section-title">InformaÃ§Ãµes bÃ¡sicas</h3>
+              <h3 className="section-title">Informações básicas</h3>
               <div className="form-grid">
                 <div>
                   <label className="form-label">Nome da empresa</label>
@@ -261,12 +261,12 @@ export default function ConfiguracoesSistemaPage() {
                 </div>
 
                 <div>
-                  <label className="form-label">DescriÃ§Ã£o curta</label>
+                  <label className="form-label">Descrição curta</label>
                   <input
                     name="descricao_empresa"
                     value={form.descricao_empresa}
                     onChange={handleChange}
-                    placeholder="Ex.: GestÃ£o inteligente de estoque"
+                    placeholder="Ex.: Gestão inteligente de estoque"
                     required
                   />
                 </div>
@@ -341,8 +341,8 @@ export default function ConfiguracoesSistemaPage() {
               <h3 className="section-title">Cores principais</h3>
               <div className="form-grid">
                 {[
-                  ["cor_primaria", "Cor primÃ¡ria"],
-                  ["cor_secundaria", "Cor secundÃ¡ria"],
+                  ["cor_primaria", "Cor primária"],
+                  ["cor_secundaria", "Cor secundária"],
                   ["cor_acento", "Cor de acento"],
                 ].map(([fieldName, label]) => (
                   <div key={fieldName} className="color-control">
@@ -380,7 +380,7 @@ export default function ConfiguracoesSistemaPage() {
                 Voltar ao salvo
               </button>
               <button type="submit" className="button-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar configuraÃ§Ãµes"}
+                {salvando ? "Salvando..." : "Salvar configurações"}
               </button>
             </div>
           </form>
@@ -427,13 +427,13 @@ export default function ConfiguracoesSistemaPage() {
 
             <div className="settings-status-grid">
               <div className="metric-card">
-                <span className="metric-card__label">Ãšltima atualizaÃ§Ã£o</span>
+                <span className="metric-card__label">Última atualização</span>
                 <strong className="metric-card__value settings-metric__value">
                   {formatDateTime(config.atualizado_em)}
                 </strong>
               </div>
               <div className="metric-card">
-                <span className="metric-card__label">ResponsÃ¡vel</span>
+                <span className="metric-card__label">Responsável</span>
                 <strong className="metric-card__value settings-metric__value">
                   {config.atualizado_por_username || "Sistema"}
                 </strong>

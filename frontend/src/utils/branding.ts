@@ -95,6 +95,26 @@ function rgbToHsl({ r, g, b }) {
   };
 }
 
+type PaletteBucket = {
+  pixelCount: number;
+  saturationTotal: number;
+  lightnessTotal: number;
+  hueVectorX: number;
+  hueVectorY: number;
+  weight: number;
+};
+
+type PaletteCandidate = {
+  coverage: number;
+  hex: string;
+  hue: number;
+  isNeutral: boolean;
+  lightness: number;
+  pixelCount: number;
+  saturation: number;
+  weight: number;
+};
+
 function getColorDistance(firstHex, secondHex) {
   const first = hexToRgb(firstHex);
   const second = hexToRgb(secondHex);
@@ -106,8 +126,115 @@ function getColorDistance(firstHex, secondHex) {
   );
 }
 
+function hueToRgbChannel(p, q, t) {
+  let safeT = t;
+
+  if (safeT < 0) {
+    safeT += 1;
+  }
+
+  if (safeT > 1) {
+    safeT -= 1;
+  }
+
+  if (safeT < 1 / 6) {
+    return p + (q - p) * 6 * safeT;
+  }
+
+  if (safeT < 1 / 2) {
+    return q;
+  }
+
+  if (safeT < 2 / 3) {
+    return p + (q - p) * (2 / 3 - safeT) * 6;
+  }
+
+  return p;
+}
+
+function hslToRgb({ h, s, l }) {
+  const hue = ((h % 360) + 360) % 360 / 360;
+  const saturation = clamp(s, 0, 1);
+  const lightness = clamp(l, 0, 1);
+
+  if (saturation === 0) {
+    const channel = lightness * 255;
+
+    return {
+      r: channel,
+      g: channel,
+      b: channel,
+    };
+  }
+
+  const q =
+    lightness < 0.5
+      ? lightness * (1 + saturation)
+      : lightness + saturation - lightness * saturation;
+  const p = 2 * lightness - q;
+
+  return {
+    r: hueToRgbChannel(p, q, hue + 1 / 3) * 255,
+    g: hueToRgbChannel(p, q, hue) * 255,
+    b: hueToRgbChannel(p, q, hue - 1 / 3) * 255,
+  };
+}
+
+function hslToHex(hsl) {
+  return rgbToHex(hslToRgb(hsl));
+}
+
+function getHueDistance(firstHue, secondHue) {
+  const distance = Math.abs(firstHue - secondHue) % 360;
+  return Math.min(distance, 360 - distance);
+}
+
+function getAverageHue(vectorX, vectorY) {
+  if (vectorX === 0 && vectorY === 0) {
+    return 0;
+  }
+
+  const angle = (Math.atan2(vectorY, vectorX) * 180) / Math.PI;
+
+  return (angle + 360) % 360;
+}
+
+function isLikelyNeutralColor({ s, l }) {
+  return s < 0.12 || (s < 0.2 && (l < 0.18 || l > 0.82));
+}
+
+function isExtremeImageColor({ s, l }) {
+  if (l > 0.985) {
+    return true;
+  }
+
+  if (l < 0.03) {
+    return true;
+  }
+
+  if (l > 0.95 && s < 0.12) {
+    return true;
+  }
+
+  if (l < 0.06 && s < 0.16) {
+    return true;
+  }
+
+  return false;
+}
+
+function getPixelPaletteWeight(hsl, alpha) {
+  const alphaWeight = clamp(alpha / 255, 0, 1);
+  const balance = 1 - Math.min(1, Math.abs(hsl.l - 0.52) / 0.52);
+  const saturationBoost = 0.65 + hsl.s * 1.9;
+  const balanceBoost = 0.75 + balance * 0.95;
+  const neutralFactor = isLikelyNeutralColor(hsl) ? 0.62 : 1;
+
+  return alphaWeight * saturationBoost * balanceBoost * neutralFactor;
+}
+
 function quantizeChannel(value) {
-  return clamp(Math.round(value / 24) * 24, 0, 255);
+  return clamp(Math.round(value / 18) * 18, 0, 255);
 }
 
 function loadImage(source: string | Blob): Promise<HTMLImageElement> {
@@ -139,11 +266,178 @@ function loadImage(source: string | Blob): Promise<HTMLImageElement> {
   });
 }
 
-function chooseDistinctColor(candidates, baseColors, fallback) {
+function hasEnoughPaletteDifference(candidate, baseColors: PaletteCandidate[]) {
+  return baseColors.every((baseColor) => {
+    return (
+      getColorDistance(candidate.hex, baseColor.hex) > 54 ||
+      getHueDistance(candidate.hue, baseColor.hue) > 18 ||
+      Math.abs(candidate.lightness - baseColor.lightness) > 0.16
+    );
+  });
+}
+
+function selectCandidate(candidates: PaletteCandidate[], getScore, predicate = () => true) {
+  let bestCandidate = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  candidates.forEach((candidate) => {
+    if (!predicate(candidate)) {
+      return;
+    }
+
+    const score = getScore(candidate);
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = candidate;
+    }
+  });
+
+  return bestCandidate;
+}
+
+function buildSecondaryFallback(primary: PaletteCandidate) {
+  return shiftColor(primary.hex, primary.lightness > 0.54 ? -0.3 : 0.3);
+}
+
+function chooseFallbackColor(candidates, baseColors, fallback) {
   return (
     candidates.find((candidate) =>
-      baseColors.every((baseColor) => getColorDistance(candidate.hex, baseColor) > 78),
-    )?.hex || fallback
+      baseColors.every((baseColor) => getColorDistance(candidate, baseColor) > 68),
+    ) || fallback
+  );
+}
+
+function buildAccentFallback(primary: PaletteCandidate, secondaryHex: string) {
+  const rotatedAccent = hslToHex({
+    h: primary.hue + (primary.hue < 180 ? 42 : -42),
+    s: clamp(Math.max(primary.saturation, 0.44), 0.4, 0.88),
+    l: clamp(primary.lightness < 0.42 ? 0.56 : 0.48, 0.38, 0.64),
+  });
+  const mixedAccent = mixColors(primary.hex, DEFAULT_THEME.cor_acento, 0.48);
+
+  return chooseFallbackColor(
+    [rotatedAccent, mixedAccent],
+    [primary.hex, secondaryHex],
+    mixedAccent,
+  );
+}
+
+function createPaletteCandidates(buckets: Map<string, PaletteBucket>) {
+  const totalWeight = [...buckets.values()].reduce(
+    (accumulator, bucket) => accumulator + bucket.weight,
+    0,
+  );
+
+  return [...buckets.entries()]
+    .map(([hex, bucket]) => ({
+      hex,
+      coverage: totalWeight > 0 ? bucket.weight / totalWeight : 0,
+      hue: getAverageHue(bucket.hueVectorX, bucket.hueVectorY),
+      isNeutral: isLikelyNeutralColor({
+        s: bucket.saturationTotal / bucket.weight,
+        l: bucket.lightnessTotal / bucket.weight,
+      }),
+      lightness: bucket.lightnessTotal / bucket.weight,
+      pixelCount: bucket.pixelCount,
+      saturation: bucket.saturationTotal / bucket.weight,
+      weight: bucket.weight,
+    }))
+    .sort((first, second) => second.weight - first.weight);
+}
+
+function choosePrimaryCandidate(candidates: PaletteCandidate[]) {
+  return (
+    selectCandidate(
+      candidates,
+      (candidate) => {
+        const coverageScore = Math.min(candidate.coverage * 10, 2.8);
+        const saturationScore = candidate.saturation * 2.5;
+        const lightnessBalance =
+          1 - Math.min(1, Math.abs(candidate.lightness - 0.48) / 0.48);
+        const neutralPenalty = candidate.isNeutral ? 1.15 : 0;
+
+        return (
+          candidate.weight +
+          coverageScore +
+          saturationScore +
+          lightnessBalance -
+          neutralPenalty
+        );
+      },
+      (candidate) => !candidate.isNeutral || candidate.coverage > 0.34,
+    ) || candidates[0]
+  );
+}
+
+function chooseSecondaryCandidate(candidates: PaletteCandidate[], primary: PaletteCandidate) {
+  return selectCandidate(
+    candidates,
+    (candidate) => {
+      const hueDelta = getHueDistance(candidate.hue, primary.hue) / 180;
+      const lightnessDelta = Math.abs(candidate.lightness - primary.lightness);
+      const contrast = Math.min(getContrastRatio(candidate.hex, primary.hex), 4.5) / 4.5;
+      const colorDistance = getColorDistance(candidate.hex, primary.hex) / 120;
+      const neutralPenalty = candidate.isNeutral ? 0.4 : 0;
+
+      return (
+        candidate.weight * 0.5 +
+        colorDistance +
+        hueDelta * 2.2 +
+        lightnessDelta * 1.8 +
+        contrast -
+        neutralPenalty
+      );
+    },
+    (candidate) =>
+      candidate.hex !== primary.hex && hasEnoughPaletteDifference(candidate, [primary]),
+  );
+}
+
+function chooseAccentCandidate(
+  candidates: PaletteCandidate[],
+  primary: PaletteCandidate,
+  secondary: PaletteCandidate | null,
+) {
+  const baseColors = secondary ? [primary, secondary] : [primary];
+
+  return selectCandidate(
+    candidates,
+    (candidate) => {
+      const hueDistancePrimary = getHueDistance(candidate.hue, primary.hue) / 180;
+      const hueDistanceSecondary = secondary
+        ? getHueDistance(candidate.hue, secondary.hue) / 180
+        : 0.45;
+      const colorDistancePrimary = getColorDistance(candidate.hex, primary.hex) / 132;
+      const colorDistanceSecondary = secondary
+        ? getColorDistance(candidate.hex, secondary.hex) / 132
+        : 0.45;
+      const lightnessBalance =
+        1 - Math.min(1, Math.abs(candidate.lightness - 0.52) / 0.52);
+      const neutralPenalty = candidate.isNeutral ? 1.3 : 0;
+
+      return (
+        candidate.saturation * 3 +
+        candidate.weight * 0.35 +
+        colorDistancePrimary +
+        colorDistanceSecondary * 0.8 +
+        hueDistancePrimary * 1.8 +
+        hueDistanceSecondary +
+        lightnessBalance -
+        neutralPenalty
+      );
+    },
+    (candidate) => {
+      if (candidate.hex === primary.hex || secondary?.hex === candidate.hex) {
+        return false;
+      }
+
+      if (candidate.lightness < 0.16 || candidate.lightness > 0.82) {
+        return false;
+      }
+
+      return hasEnoughPaletteDifference(candidate, baseColors);
+    },
   );
 }
 
@@ -339,14 +633,14 @@ export async function extractPaletteFromImage(source: string | Blob) {
     throw new Error("Não foi possível ler a imagem da logo.");
   }
 
-  const maxDimension = 96;
+  const maxDimension = 144;
   const scale = Math.min(maxDimension / image.width, maxDimension / image.height, 1);
   canvas.width = Math.max(1, Math.round(image.width * scale));
   canvas.height = Math.max(1, Math.round(image.height * scale));
 
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
-  const buckets = new Map<string, { score: number; saturation: number }>();
+  const buckets = new Map<string, PaletteBucket>();
 
   for (let index = 0; index < data.length; index += 4) {
     const alpha = data[index + 3];
@@ -361,11 +655,7 @@ export async function extractPaletteFromImage(source: string | Blob) {
     };
     const hsl = rgbToHsl(rawColor);
 
-    if (hsl.l > 0.97) {
-      continue;
-    }
-
-    if (hsl.l < 0.06 && hsl.s < 0.22) {
+    if (isExtremeImageColor(hsl)) {
       continue;
     }
 
@@ -375,24 +665,30 @@ export async function extractPaletteFromImage(source: string | Blob) {
       b: quantizeChannel(rawColor.b),
     };
     const hex = rgbToHex(quantized);
-    const score = 1 + hsl.s * 1.8 + (0.5 - Math.abs(hsl.l - 0.5));
-    const current = buckets.get(hex) || { score: 0, saturation: hsl.s };
+    const weight = getPixelPaletteWeight(hsl, alpha);
+    const current = buckets.get(hex) || {
+      pixelCount: 0,
+      saturationTotal: 0,
+      lightnessTotal: 0,
+      hueVectorX: 0,
+      hueVectorY: 0,
+      weight: 0,
+    };
+    const hueRadians = (hsl.h * Math.PI) / 180;
 
     buckets.set(hex, {
-      score: current.score + score,
-      saturation: Math.max(current.saturation, hsl.s),
+      pixelCount: current.pixelCount + 1,
+      saturationTotal: current.saturationTotal + hsl.s * weight,
+      lightnessTotal: current.lightnessTotal + hsl.l * weight,
+      hueVectorX: current.hueVectorX + Math.cos(hueRadians) * weight,
+      hueVectorY: current.hueVectorY + Math.sin(hueRadians) * weight,
+      weight: current.weight + weight,
     });
   }
 
-  const ordered = [...buckets.entries()]
-    .map(([hex, meta]) => ({
-      hex,
-      score: meta.score,
-      saturation: meta.saturation,
-    }))
-    .sort((first, second) => second.score - first.score);
+  const candidates = createPaletteCandidates(buckets);
 
-  if (ordered.length === 0) {
+  if (candidates.length === 0) {
     return {
       cor_primaria: DEFAULT_THEME.cor_primaria,
       cor_secundaria: DEFAULT_THEME.cor_secundaria,
@@ -400,27 +696,19 @@ export async function extractPaletteFromImage(source: string | Blob) {
     };
   }
 
-  const primary = ordered[0].hex;
-  const secondary = chooseDistinctColor(
-    ordered,
-    [primary],
-    shiftColor(primary, -0.2),
+  const primaryCandidate = choosePrimaryCandidate(candidates);
+  const secondaryCandidate = chooseSecondaryCandidate(candidates, primaryCandidate);
+  const secondary = secondaryCandidate?.hex || buildSecondaryFallback(primaryCandidate);
+  const accentCandidate = chooseAccentCandidate(
+    candidates,
+    primaryCandidate,
+    secondaryCandidate,
   );
-  const accentCandidates = [...ordered].sort((first, second) => {
-    if (second.saturation !== first.saturation) {
-      return second.saturation - first.saturation;
-    }
-
-    return second.score - first.score;
-  });
-  const accent = chooseDistinctColor(
-    accentCandidates,
-    [primary, secondary],
-    mixColors(primary, DEFAULT_THEME.cor_acento, 0.35),
-  );
+  const accent =
+    accentCandidate?.hex || buildAccentFallback(primaryCandidate, secondary);
 
   return {
-    cor_primaria: primary,
+    cor_primaria: primaryCandidate.hex,
     cor_secundaria: secondary,
     cor_acento: accent,
   };
