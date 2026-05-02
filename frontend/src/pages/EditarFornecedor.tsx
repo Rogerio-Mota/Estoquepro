@@ -8,17 +8,14 @@ import PageHeader from "../components/PageHeader";
 import useAuth from "../hooks/useAuth";
 import { authJsonRequest } from "../services/api";
 
-
 export default function EditarFornecedor() {
   const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     nome: "",
-    documento: "",
     contato: "",
-    telefone: "",
-    email: "",
+    cidade: "",
   });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -34,10 +31,8 @@ export default function EditarFornecedor() {
 
         setForm({
           nome: data.nome || "",
-          documento: data.documento || "",
           contato: data.contato || "",
-          telefone: data.telefone || "",
-          email: data.email || "",
+          cidade: data.cidade || "",
         });
       } catch (error) {
         setErro(error.message || "Erro ao carregar fornecedor.");
@@ -93,10 +88,7 @@ export default function EditarFornecedor() {
   return (
     <Layout title="Editar Fornecedor">
       <div className="form-shell" style={{ maxWidth: "760px" }}>
-        <PageHeader
-          title="Editar fornecedor"
-          description="Atualize os dados comerciais e de contato do parceiro selecionado."
-        />
+        <PageHeader title="Editar fornecedor" />
 
         {erro ? <div className="alert-error">{erro}</div> : null}
 
@@ -106,47 +98,27 @@ export default function EditarFornecedor() {
               <label className="form-label">Nome</label>
               <input
                 name="nome"
-                placeholder="Nome do fornecedor"
                 value={form.nome}
                 onChange={handleChange}
                 required
               />
             </div>
             <div>
-              <label className="form-label">Documento</label>
-              <input
-                name="documento"
-                placeholder="CPF ou CNPJ"
-                value={form.documento}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
               <label className="form-label">Contato</label>
               <input
                 name="contato"
-                placeholder="Pessoa ou setor responsável"
                 value={form.contato}
                 onChange={handleChange}
+                required
               />
             </div>
             <div>
-              <label className="form-label">Telefone</label>
+              <label className="form-label">Cidade</label>
               <input
-                name="telefone"
-                placeholder="Telefone"
-                value={form.telefone}
+                name="cidade"
+                value={form.cidade}
                 onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label className="form-label">Email</label>
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
+                required
               />
             </div>
           </div>
@@ -160,7 +132,7 @@ export default function EditarFornecedor() {
               Cancelar
             </button>
             <button type="submit" className="button-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar Alterações"}
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </form>

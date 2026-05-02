@@ -11,6 +11,13 @@ import { authJsonRequest, extractCollection } from "../services/api";
 
 const ITENS_POR_PAGINA = 6;
 
+function formatarProdutos(produtos) {
+  if (!produtos?.length) {
+    return "Sem produtos";
+  }
+
+  return produtos.join(", ");
+}
 
 export default function FornecedoresPage() {
   const { user } = useAuth();
@@ -40,12 +47,12 @@ export default function FornecedoresPage() {
     const termo = busca.trim().toLowerCase();
 
     return fornecedores.filter((fornecedor) => {
+      const produtos = fornecedor.produtos_fornecidos?.join(" ").toLowerCase() || "";
       return (
         fornecedor.nome?.toLowerCase().includes(termo) ||
-        fornecedor.documento?.toLowerCase().includes(termo) ||
         fornecedor.contato?.toLowerCase().includes(termo) ||
-        fornecedor.email?.toLowerCase().includes(termo) ||
-        fornecedor.telefone?.toLowerCase().includes(termo)
+        fornecedor.cidade?.toLowerCase().includes(termo) ||
+        produtos.includes(termo)
       );
     });
   }, [fornecedores, busca]);
@@ -96,8 +103,7 @@ export default function FornecedoresPage() {
   return (
     <Layout title="Fornecedores">
       <PageHeader
-        title="Base de fornecedores"
-        description="Mantenha a rede de contatos organizada e pronta para reposição."
+        title="Fornecedores"
         action={
           user?.tipo === "admin" ? (
             <button
@@ -105,7 +111,7 @@ export default function FornecedoresPage() {
               className="button-primary"
               onClick={() => navigate("/novo-fornecedor")}
             >
-              Novo Fornecedor
+              Novo fornecedor
             </button>
           ) : null
         }
@@ -114,7 +120,7 @@ export default function FornecedoresPage() {
       <div className="page-card section-card">
         <input
           type="text"
-          placeholder="Buscar por nome, documento, contato, email ou telefone"
+          placeholder="Buscar fornecedor"
           value={busca}
           onChange={(event) => atualizarBusca(event.target.value)}
         />
@@ -126,28 +132,29 @@ export default function FornecedoresPage() {
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Documento</th>
+                <th>Cidade</th>
                 <th>Contato</th>
-                <th>Telefone</th>
-                <th>Email</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {fornecedoresPaginados.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={4}>
                     <EmptyState>Nenhum fornecedor encontrado.</EmptyState>
                   </td>
                 </tr>
               ) : (
                 fornecedoresPaginados.map((fornecedor) => (
                   <tr key={fornecedor.id}>
-                    <td>{fornecedor.nome}</td>
-                    <td>{fornecedor.documento || "-"}</td>
+                    <td>
+                      <div className="table-cell-primary">{fornecedor.nome}</div>
+                      <div className="table-cell-meta">
+                        {formatarProdutos(fornecedor.produtos_fornecidos)}
+                      </div>
+                    </td>
+                    <td>{fornecedor.cidade || "-"}</td>
                     <td>{fornecedor.contato || "-"}</td>
-                    <td>{fornecedor.telefone || "-"}</td>
-                    <td>{fornecedor.email || "-"}</td>
                     <td>
                       {user?.tipo === "admin" ? (
                         <div className="table-actions">
@@ -169,7 +176,7 @@ export default function FornecedoresPage() {
                           </button>
                         </div>
                       ) : (
-                        <span className="table-inline-note">Somente visualização</span>
+                        "-"
                       )}
                     </td>
                   </tr>

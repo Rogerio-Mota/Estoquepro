@@ -9,10 +9,8 @@ import PaginationControls from "../components/PaginationControls";
 import { getCategoryLabel } from "../constants/productOptions";
 import useAuth from "../hooks/useAuth";
 import { authJsonRequest, extractCollection } from "../services/api";
-import { formatCurrency } from "../utils/formatters";
 
 const ITENS_POR_PAGINA = 5;
-
 
 export default function ProdutosPage() {
   const { user } = useAuth();
@@ -107,8 +105,7 @@ export default function ProdutosPage() {
   return (
     <Layout title="Produtos">
       <PageHeader
-        title="Catálogo de produtos"
-        description="Busque, filtre e acompanhe o status de estoque dos itens cadastrados."
+        title="Produtos"
         action={
           user?.tipo === "admin" ? (
             <button
@@ -116,7 +113,7 @@ export default function ProdutosPage() {
               className="button-primary"
               onClick={() => navigate("/novo-produto")}
             >
-              Novo Produto
+              Novo produto
             </button>
           ) : null
         }
@@ -126,7 +123,7 @@ export default function ProdutosPage() {
         <div className="filters-grid">
           <input
             type="text"
-            placeholder="Buscar por nome, marca ou SKU"
+            placeholder="Buscar produto"
             value={busca}
             onChange={(event) => atualizarBusca(event.target.value)}
           />
@@ -135,7 +132,7 @@ export default function ProdutosPage() {
             value={categoriaFiltro}
             onChange={(event) => atualizarCategoria(event.target.value)}
           >
-            <option value="">Todas as categorias</option>
+            <option value="">Categorias</option>
             {categorias.map((categoria) => (
               <option key={categoria} value={categoria}>
                 {getCategoryLabel(categoria)}
@@ -147,7 +144,7 @@ export default function ProdutosPage() {
             value={statusFiltro}
             onChange={(event) => atualizarStatus(event.target.value)}
           >
-            <option value="">Todos os status</option>
+            <option value="">Status</option>
             <option value="ok">OK</option>
             <option value="baixo">Baixo</option>
           </select>
@@ -159,40 +156,32 @@ export default function ProdutosPage() {
           <table className="table-modern">
             <thead>
               <tr>
-                <th>Nome</th>
-                <th>Marca</th>
+                <th>Produto</th>
                 <th>Categoria</th>
-                <th>Preço</th>
                 <th>Estoque</th>
-                <th>Status</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {produtosPaginados.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={4}>
                     <EmptyState>Nenhum produto encontrado.</EmptyState>
                   </td>
                 </tr>
               ) : (
                 produtosPaginados.map((produto) => (
                   <tr key={produto.id}>
-                    <td>{produto.nome}</td>
-                    <td>{produto.marca}</td>
-                    <td>{getCategoryLabel(produto.categoria)}</td>
-                    <td>{formatCurrency(produto.preco_venda)}</td>
-                    <td>{produto.estoque_total}</td>
                     <td>
-                      <span
-                        className={`badge ${
-                          produto.status_estoque === "baixo"
-                            ? "badge-warning"
-                            : "badge-success"
-                        }`}
-                      >
-                        {produto.status_estoque}
-                      </span>
+                      <div className="table-cell-primary">{produto.nome}</div>
+                      <div className="table-cell-meta">{produto.marca || produto.sku}</div>
+                    </td>
+                    <td>{getCategoryLabel(produto.categoria)}</td>
+                    <td>
+                      <div className="table-cell-primary">{produto.estoque_total}</div>
+                      <div className="table-cell-meta">
+                        {produto.status_estoque === "baixo" ? "Baixo" : "OK"}
+                      </div>
                     </td>
                     <td>
                       {user?.tipo === "admin" ? (
@@ -213,7 +202,7 @@ export default function ProdutosPage() {
                           </button>
                         </div>
                       ) : (
-                        <span className="table-inline-note">Somente visualização</span>
+                        "-"
                       )}
                     </td>
                   </tr>

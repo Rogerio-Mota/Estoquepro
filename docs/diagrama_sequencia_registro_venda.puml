@@ -1,0 +1,55 @@
+@startuml
+skinparam shadowing false
+autonumber
+
+title EstoquePro - Diagrama de Sequência\nRegistro de Venda com Baixa Automática de Estoque
+
+actor "Funcionário / Administrador" as Operador
+participant "Frontend\nPedidoFormPage" as Tela
+participant "API\nPedidoVendaViewSet" as API
+participant "Serializer\nPedidoVendaSerializer" as Serializer
+participant "Serviço\nsalvar_pedido_venda()" as ServicoVenda
+participant "Serviço\nregistrar_movimentacao()" as ServicoEstoque
+database "Banco de Dados" as DB
+
+Operador -> Tela : Preenche cliente e itens
+Tela -> Tela : Valida campos e saldo exibido
+Operador -> Tela : Clica em Salvar
+Tela -> API : POST /api/pedidos/
+
+API -> Serializer : validar payload
+Serializer -> ServicoVenda : salvar_pedido_venda(dados, itens, usuário)
+
+note over ServicoVenda, DB
+  O fluxo roda dentro de transaction.atomic.
+  Se algum item falhar, a venda inteira é desfeita.
+end note
+
+ServicoVenda -> ServicoVenda : validar itens duplicados
+ServicoVenda -> DB : INSERT PedidoVenda
+
+loop Para cada item da venda
+  ServicoVenda -> DB : INSERT PedidoVendaItem
+  ServicoVenda -> ServicoEstoque : registrar_movimentacao(variacao, saida, quantidade)
+  ServicoEstoque -> DB : SELECT Variacao FOR UPDATE
+
+  alt Saldo suficiente
+    ServicoEstoque -> DB : UPDATE Variacao.saldo_atual
+    ServicoEstoque -> DB : INSERT Movimentacao(tipo=saida)
+    ServicoEstoque --> ServicoVenda : movimentacao_saida
+    ServicoVenda -> DB : UPDATE PedidoVendaItem.movimentacao_saida_id
+  else Saldo insuficiente
+    ServicoEstoque --> ServicoVenda : ValidationError
+    ServicoVenda --> Serializer : erro de estoque
+    Serializer --> API : resposta 400
+    API --> Tela : erro de validação
+    Tela --> Operador : Exibe mensagem de erro
+  end
+end
+
+ServicoVenda --> Serializer : pedido salvo
+Serializer --> API : objeto serializado
+API --> Tela : 201 Created
+Tela --> Operador : Confirma venda e redireciona
+
+@enduml

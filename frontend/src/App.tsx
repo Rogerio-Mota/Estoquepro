@@ -5,14 +5,12 @@ import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider } from "./context/AuthContext";
 import { SystemConfigProvider } from "./context/SystemConfigContext";
 import PrivateRoute from "./routes/PrivateRoute";
-import ConfiguracoesSistemaPage from "./pages/ConfiguracoesSistemaPage";
 import DashboardHome from "./pages/DashboardHome";
 import EditarFornecedor from "./pages/EditarFornecedor";
 import EditarProduto from "./pages/EditarProduto";
 import EditarUsuario from "./pages/EditarUsuario";
 import EstoqueBaixoPage from "./pages/EstoqueBaixoPage";
 import FornecedoresPage from "./pages/FornecedoresPage";
-import ImportarNotaFiscalPage from "./pages/ImportarNotaFiscalPage";
 import Login from "./pages/Login";
 import MovimentacoesPage from "./pages/MovimentacoesPage";
 import NovaMovimentacao from "./pages/NovaMovimentacao";
@@ -66,14 +64,6 @@ export default function App() {
               }
             />
             <Route
-              path="/editar-pedido/:id"
-              element={
-                <ProtectedPage>
-                  <PedidoFormPage />
-                </ProtectedPage>
-              }
-            />
-            <Route
               path="/produtos"
               element={
                 <ProtectedPage>
@@ -118,14 +108,6 @@ export default function App() {
               element={
                 <ProtectedPage>
                   <NovaMovimentacao />
-                </ProtectedPage>
-              }
-            />
-            <Route
-              path="/importar-nota-fiscal"
-              element={
-                <ProtectedPage>
-                  <ImportarNotaFiscalPage />
                 </ProtectedPage>
               }
             />
@@ -182,14 +164,6 @@ export default function App() {
               element={
                 <ProtectedPage>
                   <EditarUsuario />
-                </ProtectedPage>
-              }
-            />
-            <Route
-              path="/configuracoes"
-              element={
-                <ProtectedPage>
-                  <ConfiguracoesSistemaPage />
                 </ProtectedPage>
               }
             />

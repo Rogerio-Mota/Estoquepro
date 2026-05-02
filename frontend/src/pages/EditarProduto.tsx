@@ -12,7 +12,6 @@ import {
 import useAuth from "../hooks/useAuth";
 import { authJsonRequest, extractCollection } from "../services/api";
 
-
 export default function EditarProduto() {
   const { user } = useAuth();
   const { id } = useParams();
@@ -123,19 +122,16 @@ export default function EditarProduto() {
 
   if (user?.tipo !== "admin") {
     return (
-      <Layout title="Editar Produto">
+      <Layout title="Editar produto">
         <AccessNotice>Acesso restrito ao administrador.</AccessNotice>
       </Layout>
     );
   }
 
   return (
-    <Layout title="Editar Produto">
+    <Layout title="Editar produto">
       <div className="form-shell">
-        <PageHeader
-          title="Editar produto"
-          description="Atualize as informações principais, os preços e a configuração do item selecionado."
-        />
+        <PageHeader title="Editar produto" />
 
         {erro ? <div className="alert-error">{erro}</div> : null}
 
@@ -147,7 +143,7 @@ export default function EditarProduto() {
                 <label className="form-label">Nome do produto</label>
                 <input
                   name="nome"
-                  placeholder="Ex.: Camisa Polo"
+                  placeholder="Ex.: Camisa polo"
                   value={form.nome}
                   onChange={handleChange}
                   required
@@ -275,7 +271,7 @@ export default function EditarProduto() {
               Cancelar
             </button>
             <button type="submit" className="button-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar Alterações"}
+              {salvando ? "Salvando..." : "Salvar alterações"}
             </button>
           </div>
         </form>

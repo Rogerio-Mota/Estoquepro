@@ -8,7 +8,6 @@ import PageHeader from "../components/PageHeader";
 import useAuth from "../hooks/useAuth";
 import { authJsonRequest } from "../services/api";
 
-
 export default function EditarUsuario() {
   const { user } = useAuth();
   const { id } = useParams();
@@ -89,19 +88,16 @@ export default function EditarUsuario() {
 
   if (user?.tipo !== "admin") {
     return (
-      <Layout title="Editar Usuário">
+      <Layout title="Editar usuário">
         <AccessNotice>Acesso restrito ao administrador.</AccessNotice>
       </Layout>
     );
   }
 
   return (
-    <Layout title="Editar Usuário">
+    <Layout title="Editar usuário">
       <div className="form-shell" style={{ maxWidth: "760px" }}>
-        <PageHeader
-          title="Editar usuário"
-          description="Atualize o perfil do colaborador e redefina a senha quando necessário."
-        />
+        <PageHeader title="Editar usuário" />
 
         {erro ? <div className="alert-error">{erro}</div> : null}
 
@@ -111,7 +107,6 @@ export default function EditarUsuario() {
               <label className="form-label">Usuário</label>
               <input
                 name="username"
-                placeholder="Digite o nome de usuário"
                 value={form.username}
                 onChange={handleChange}
                 required
@@ -119,17 +114,16 @@ export default function EditarUsuario() {
             </div>
             <div>
               <label className="form-label">Perfil</label>
-              <select name="tipo" value={form.tipo} onChange={handleChange}>
-                <option value="funcionario">Funcionário</option>
-                <option value="admin">Administrador</option>
-              </select>
+              <input
+                value={form.tipo === "admin" ? "Administrador principal" : "Funcionário"}
+                readOnly
+              />
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">Nova senha</label>
               <input
                 name="password"
                 type="password"
-                placeholder="Deixe em branco para manter a senha atual"
                 value={form.password}
                 onChange={handleChange}
               />
@@ -145,7 +139,7 @@ export default function EditarUsuario() {
               Cancelar
             </button>
             <button type="submit" className="button-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar Alterações"}
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </form>

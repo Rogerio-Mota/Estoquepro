@@ -8,14 +8,12 @@ import PageHeader from "../components/PageHeader";
 import useAuth from "../hooks/useAuth";
 import { authJsonRequest } from "../services/api";
 
-
 export default function NovoUsuario() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     username: "",
     password: "",
-    tipo: "funcionario",
   });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -37,7 +35,10 @@ export default function NovoUsuario() {
         "/usuarios/",
         {
           method: "POST",
-          body: form,
+          body: {
+            ...form,
+            tipo: "funcionario",
+          },
         },
         "Erro ao cadastrar usuário.",
       );
@@ -54,19 +55,16 @@ export default function NovoUsuario() {
 
   if (user?.tipo !== "admin") {
     return (
-      <Layout title="Novo Usuário">
+      <Layout title="Novo usuário">
         <AccessNotice>Acesso restrito ao administrador.</AccessNotice>
       </Layout>
     );
   }
 
   return (
-    <Layout title="Novo Usuário">
+    <Layout title="Novo usuário">
       <div className="form-shell" style={{ maxWidth: "760px" }}>
-        <PageHeader
-          title="Cadastrar usuário"
-          description="Crie um novo acesso e defina o perfil de permissão."
-        />
+        <PageHeader title="Novo usuário" />
 
         {erro ? <div className="alert-error">{erro}</div> : null}
 
@@ -76,7 +74,6 @@ export default function NovoUsuario() {
               <label className="form-label">Usuário</label>
               <input
                 name="username"
-                placeholder="Digite o nome de usuário"
                 value={form.username}
                 onChange={handleChange}
                 required
@@ -84,17 +81,13 @@ export default function NovoUsuario() {
             </div>
             <div>
               <label className="form-label">Perfil</label>
-              <select name="tipo" value={form.tipo} onChange={handleChange}>
-                <option value="funcionario">Funcionário</option>
-                <option value="admin">Administrador</option>
-              </select>
+              <input value="Funcionário" readOnly />
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">Senha</label>
               <input
                 name="password"
                 type="password"
-                placeholder="Digite a senha"
                 value={form.password}
                 onChange={handleChange}
                 required
@@ -111,7 +104,7 @@ export default function NovoUsuario() {
               Cancelar
             </button>
             <button type="submit" className="button-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar Usuário"}
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </form>

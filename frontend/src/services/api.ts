@@ -204,7 +204,7 @@ export async function refreshTokenRequest(
       method: "POST",
       body: { refresh },
     },
-    "Sessao expirada.",
+    "Sessão expirada.",
   );
 }
 
@@ -249,7 +249,7 @@ export async function authFetch(
 export async function authJsonRequest<T = any>(
   endpoint: string,
   options: JsonRequestOptions = {},
-  fallbackMessage = "Ocorreu um erro ao processar a requisicao.",
+  fallbackMessage = "Ocorreu um erro ao processar a requisição.",
 ): Promise<T> {
   const response = await authFetch(endpoint, options);
   const data = await parseResponseBody(response);
@@ -265,7 +265,7 @@ export async function meRequest<T = any>(
   token = localStorage.getItem(STORAGE_KEYS.access),
 ): Promise<T> {
   if (!token) {
-    throw new Error("Sessao expirada.");
+    throw new Error("Sessão expirada.");
   }
 
   const response = await fetch(buildUrl("/usuario-logado/"), {
@@ -276,7 +276,7 @@ export async function meRequest<T = any>(
   const data = await parseResponseBody(response);
 
   if (!response.ok) {
-    throw new Error(buildApiErrorMessage(data, "Erro ao buscar usuario logado."));
+    throw new Error(buildApiErrorMessage(data, "Erro ao buscar usuário logado."));
   }
 
   return data;

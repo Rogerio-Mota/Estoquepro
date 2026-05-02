@@ -7,7 +7,6 @@ import useSystemConfig from "../hooks/useSystemConfig";
 import { jsonRequest } from "../services/api";
 import { getBrandInitials } from "../utils/branding";
 
-
 export default function PrimeiroAcessoPage() {
   const { login, loading, isAuthenticated } = useAuth();
   const { config } = useSystemConfig();
@@ -126,10 +125,7 @@ export default function PrimeiroAcessoPage() {
               <h1 className="login-page__title">{config.nome_empresa}</h1>
             </div>
           </div>
-          <p className="login-page__subtitle">
-            Configure o primeiro administrador para liberar o acesso do cliente
-            final e iniciar a operação com segurança.
-          </p>
+          <p className="login-page__subtitle">Crie o primeiro acesso do sistema.</p>
         </div>
       </section>
 
@@ -137,20 +133,20 @@ export default function PrimeiroAcessoPage() {
         <div className="page-card login-card">
           <div className="login-card__header">
             <h2>Administrador inicial</h2>
-            <p>Esse acesso terá permissão para configurar usuários e o sistema.</p>
+            <p>Esse será o acesso principal.</p>
           </div>
 
           {erro ? <div className="alert-error">{erro}</div> : null}
 
           {verificando ? (
-            <p className="login-card__footer">Verificando status do sistema...</p>
+            <p className="login-card__footer">Verificando...</p>
           ) : (
             <form className="login-card__form" onSubmit={handleSubmit}>
               <div>
-                <label className="form-label">Usuário administrador</label>
+                <label className="form-label">Usuário</label>
                 <input
                   name="username"
-                  placeholder="Ex.: admin"
+                  placeholder="admin"
                   value={form.username}
                   onChange={handleChange}
                   required
@@ -162,7 +158,7 @@ export default function PrimeiroAcessoPage() {
                 <input
                   name="password"
                   type="password"
-                  placeholder="Crie uma senha segura"
+                  placeholder="Senha"
                   value={form.password}
                   onChange={handleChange}
                   required
@@ -181,13 +177,6 @@ export default function PrimeiroAcessoPage() {
                 />
               </div>
 
-              <div className="highlight-panel" style={{ marginBottom: 0 }}>
-                <p className="table-inline-note">
-                  Depois dessa etapa, os próximos administradores poderão ser
-                  criados pela própria tela de usuários.
-                </p>
-              </div>
-
               <div className="form-actions" style={{ justifyContent: "stretch" }}>
                 <button
                   type="button"
@@ -202,7 +191,7 @@ export default function PrimeiroAcessoPage() {
                   className="button-primary"
                   disabled={salvando || loading}
                 >
-                  {salvando || loading ? "Configurando..." : "Criar administrador"}
+                  {salvando || loading ? "Configurando..." : "Criar"}
                 </button>
               </div>
             </form>

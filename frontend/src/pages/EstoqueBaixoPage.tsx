@@ -10,7 +10,6 @@ import { authJsonRequest, extractCollection } from "../services/api";
 
 const ITENS_POR_PAGINA = 6;
 
-
 export default function EstoqueBaixoPage() {
   const [produtos, setProdutos] = useState([]);
   const [busca, setBusca] = useState("");
@@ -83,17 +82,14 @@ export default function EstoqueBaixoPage() {
   }
 
   return (
-    <Layout title="Estoque Baixo">
-      <PageHeader
-        title="Produtos em atenção"
-        description="Acompanhe rapidamente os itens que estão no limite mínimo ou abaixo dele."
-      />
+    <Layout title="Estoque baixo">
+      <PageHeader title="Estoque baixo" />
 
       <div className="page-card section-card">
         <div className="filters-grid">
           <input
             type="text"
-            placeholder="Buscar por nome, marca ou SKU"
+            placeholder="Buscar produto"
             value={busca}
             onChange={(event) => atualizarBusca(event.target.value)}
           />
@@ -102,7 +98,7 @@ export default function EstoqueBaixoPage() {
             value={categoriaFiltro}
             onChange={(event) => atualizarCategoria(event.target.value)}
           >
-            <option value="">Todas as categorias</option>
+            <option value="">Categorias</option>
             {categorias.map((categoria) => (
               <option key={categoria} value={categoria}>
                 {getCategoryLabel(categoria)}
@@ -114,33 +110,30 @@ export default function EstoqueBaixoPage() {
 
       <div className="page-card table-card">
         {produtosPaginados.length === 0 ? (
-          <EmptyState>Nenhum produto com estoque baixo no momento.</EmptyState>
+          <EmptyState>Nenhum produto com estoque baixo.</EmptyState>
         ) : (
           <div className="table-wrapper">
             <table className="table-modern">
               <thead>
                 <tr>
                   <th>Produto</th>
-                  <th>Marca</th>
                   <th>SKU</th>
-                  <th>Categoria</th>
-                  <th>Mínimo</th>
                   <th>Atual</th>
-                  <th>Status</th>
+                  <th>Min</th>
                 </tr>
               </thead>
               <tbody>
                 {produtosPaginados.map((produto) => (
                   <tr key={produto.id}>
-                    <td>{produto.nome}</td>
-                    <td>{produto.marca}</td>
-                    <td>{produto.sku}</td>
-                    <td>{getCategoryLabel(produto.categoria)}</td>
-                    <td>{produto.estoque_minimo}</td>
-                    <td>{produto.estoque_total}</td>
                     <td>
-                      <span className="badge badge-warning">baixo</span>
+                      <div className="table-cell-primary">{produto.nome}</div>
+                      <div className="table-cell-meta">
+                        {getCategoryLabel(produto.categoria)}
+                      </div>
                     </td>
+                    <td>{produto.sku}</td>
+                    <td>{produto.estoque_total}</td>
+                    <td>{produto.estoque_minimo}</td>
                   </tr>
                 ))}
               </tbody>

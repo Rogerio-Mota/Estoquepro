@@ -1,25 +1,9 @@
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db import OperationalError, ProgrammingError, transaction
+from django.db import transaction
 from django.db.models import Q
 
-from ..models import ConfiguracaoSistema, PerfilUsuario
-
-
-def obter_configuracao_sistema():
-    try:
-        configuracao, _ = ConfiguracaoSistema.objects.get_or_create(pk=1)
-    except (OperationalError, ProgrammingError) as error:
-        raise ValidationError(
-            {
-                "configuracao_sistema": (
-                    "A estrutura do banco esta desatualizada para as configuracoes do sistema. "
-                    "Execute 'python manage.py migrate' no backend e tente novamente."
-                )
-            }
-        ) from error
-
-    return configuracao
+from ..models import PerfilUsuario
 
 
 def existe_administrador_configurado():

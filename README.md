@@ -108,44 +108,134 @@ PROJETO_MVP/
 
 ## Requisitos
 
+- Git instalado
 - Python 3.11+ recomendado
+- PostgreSQL 15+ recomendado
 - Node.js 20+ recomendado
 - npm 10+ recomendado
 
-## Como executar o projeto
+## Como a equipe deve rodar o projeto no proprio notebook
 
-### 1. Backend
+> Importante: o `package.json` da raiz e auxiliar. O frontend real fica em `frontend/` e o backend real fica em `backend/`.
+
+### 1. Clonar o repositorio
+
+```powershell
+git clone <URL_DO_REPOSITORIO>
+cd PROJETO_MVP
+```
+
+### 2. Criar o banco PostgreSQL local
+
+Se a equipe for usar o usuario padrao `postgres`, basta criar o banco:
+
+```powershell
+psql -U postgres -c "CREATE DATABASE estoquepro;"
+```
+
+Se cada pessoa usar outro usuario ou senha, e so ajustar depois no arquivo `backend/.env`.
+
+### 3. Configurar e subir o backend
 
 No PowerShell:
 
 ```powershell
 cd backend
+Copy-Item .env.example .env
 python -m venv venv
 .\venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+Edite `backend/.env` antes de continuar.
+
+Pontos obrigatorios:
+
+- troque `DJANGO_SECRET_KEY` por uma chave real; o placeholder do exemplo nao funciona;
+- configure `POSTGRES_PASSWORD` com a senha do PostgreSQL local;
+- se necessario, ajuste `POSTGRES_USER`, `POSTGRES_HOST` e `POSTGRES_PORT`.
+
+Cada pessoa deve gerar a propria `DJANGO_SECRET_KEY` no proprio notebook. Essa chave nao precisa ser igual a sua para desenvolvimento local.
+
+Se precisar gerar uma chave nova rapidamente:
+
+```powershell
+python -c "from secrets import token_urlsafe; print(token_urlsafe(50))"
+```
+
+Exemplo minimo de `backend/.env` para ambiente local:
+
+```env
+DJANGO_SECRET_KEY=sua-chave-unica-aqui
+DJANGO_DEBUG=true
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+DJANGO_CORS_ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
+POSTGRES_DB=estoquepro
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=sua_senha_do_postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_SSLMODE=prefer
+DB_CONN_MAX_AGE=60
+```
+
+Depois aplique as migracoes e suba o servidor:
+
+```powershell
 python manage.py migrate
+python manage.py createsuperuser
 python manage.py runserver
 ```
 
 Se o ambiente virtual ja existir, basta ativar e seguir a partir do `pip install` ou do `migrate`.
 
-Antes de subir o backend, crie `backend/.env` a partir de `backend/.env.example`.
-
-### 2. Frontend
+### 4. Configurar e subir o frontend
 
 Em outro terminal:
 
 ```powershell
 cd frontend
+Copy-Item .env.example .env
 npm install
 npm run dev
 ```
 
-### 3. Acessos locais
+O arquivo `frontend/.env` pode ficar assim:
+
+```env
+VITE_API_URL=http://127.0.0.1:8000/api
+```
+
+Se a API estiver rodando no endereco padrao acima, o frontend tambem funciona sem esse arquivo, mas manter o `.env` ajuda a equipe a padronizar o setup.
+
+### 5. Acessos locais
 
 - Frontend: `http://localhost:5173`
 - Backend/API: `http://127.0.0.1:8000/api`
 - Admin Django: `http://127.0.0.1:8000/admin`
+
+### 6. Primeiro acesso
+
+- se voce criou o superusuario com `createsuperuser`, ja pode entrar com esse usuario;
+- se o banco estiver vazio e ninguem tiver criado usuario ainda, o frontend libera o fluxo de `primeiro acesso`.
+
+## Como executar o projeto
+
+### Backend
+
+```powershell
+cd backend
+.\venv\Scripts\Activate.ps1
+python manage.py runserver
+```
+
+### Frontend
+
+```powershell
+cd frontend
+npm run dev
+```
 
 ## Criacao de usuario administrador
 
@@ -160,12 +250,12 @@ Esse usuario ja pode acessar o admin do Django e tambem possui privilegios admin
 
 ## Variaveis de ambiente
 
-O backend ja possui valores padrao para desenvolvimento, mas voce pode sobrescrever:
+O backend aceita `.env` em `backend/.env` e exige uma chave secreta valida. Abaixo estao os valores padrao reais do codigo:
 
 | Variavel | Descricao | Padrao |
 | --- | --- | --- |
-| `DJANGO_SECRET_KEY` | Chave secreta do Django | `django-insecure-dev-only-key-change-in-production` |
-| `DJANGO_DEBUG` | Ativa modo debug | `true` |
+| `DJANGO_SECRET_KEY` | Chave secreta do Django | obrigatoria, sem padrao utilizavel |
+| `DJANGO_DEBUG` | Ativa modo debug | `false` |
 | `DJANGO_ALLOWED_HOSTS` | Hosts permitidos | `127.0.0.1,localhost` |
 | `DJANGO_CORS_ALLOWED_ORIGINS` | Origens permitidas para o frontend | `http://127.0.0.1:5173,http://localhost:5173` |
 | `DATABASE_URL` | URL completa do PostgreSQL | vazio |
@@ -178,7 +268,7 @@ O backend ja possui valores padrao para desenvolvimento, mas voce pode sobrescre
 | `DB_CONN_MAX_AGE` | Reuso de conexoes Django | `60` |
 | `VITE_API_URL` | URL base da API no frontend | `http://127.0.0.1:8000/api` |
 
-O backend usa PostgreSQL. Configure `DATABASE_URL` ou os campos `POSTGRES_*` antes de iniciar a aplicacao.
+O backend usa PostgreSQL. Configure `DATABASE_URL` ou os campos `POSTGRES_*` antes de iniciar a aplicacao. Se `DJANGO_SECRET_KEY` continuar com o placeholder do `.env.example`, o backend nao inicia.
 
 ## Perfis de acesso
 

@@ -62,7 +62,7 @@ export default function Login() {
       return;
     }
 
-    setErro(result.message || "Não foi possível entrar no sistema.");
+    setErro(result.message || "Não foi possível entrar.");
   }
 
   if (isAuthenticated) {
@@ -88,42 +88,35 @@ export default function Login() {
               </div>
 
               <div>
-                <span className="login-page__eyebrow">Ambiente interno</span>
+                <span className="login-page__eyebrow">Sistema interno</span>
                 <h1 className="login-page__brand-name">{config.nome_empresa}</h1>
               </div>
             </div>
 
             <div className="login-page__intro">
-              <h2 className="login-page__title">Acesso ao painel da loja.</h2>
-              <p className="login-page__subtitle">
-                {config.descricao_empresa}. Entre para continuar a operação com um
-                ambiente interno mais claro e organizado.
-              </p>
+              <h2 className="login-page__title">Entrar</h2>
+              <p className="login-page__subtitle">Acesse o sistema da loja.</p>
             </div>
           </div>
 
           <div className="login-card__body">
             <div className="login-card__header">
               <span className="login-card__eyebrow">Acesso</span>
-              <h2>Bem-vindo de volta</h2>
-              <p>Use seu usuário e senha para continuar no painel de gestão.</p>
+              <h2>Login</h2>
             </div>
 
             {erro ? <div className="alert-error">{erro}</div> : null}
 
             {carregandoPrimeiroAcesso ? (
               <div className="login-card__status">
-                <strong>Preparando o acesso</strong>
-                <p>Estamos verificando se a configuração inicial já foi concluída.</p>
+                <strong>Carregando</strong>
+                <p>Verificando o sistema.</p>
               </div>
             ) : primeiroAcessoPendente ? (
               <div className="login-card__form">
                 <div className="login-card__status login-card__status--highlight">
                   <strong>Primeiro acesso pendente</strong>
-                  <p>
-                    Nenhum administrador foi configurado ainda. Conclua a criação
-                    do primeiro login para liberar o sistema.
-                  </p>
+                  <p>Crie o administrador inicial.</p>
                 </div>
 
                 <button
@@ -131,7 +124,7 @@ export default function Login() {
                   className="button-primary"
                   onClick={() => navigate("/primeiro-acesso")}
                 >
-                  Configurar administrador inicial
+                  Configurar
                 </button>
               </div>
             ) : (
@@ -140,40 +133,34 @@ export default function Login() {
                   <label className="form-label">Usuário</label>
                   <input
                     type="text"
-                    placeholder="Digite seu usuário"
+                    placeholder="Usuário"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     autoComplete="username"
                     required
                   />
-                  <p className="login-field__hint">
-                    Use o mesmo identificador cadastrado para a sua equipe.
-                  </p>
                 </div>
 
                 <div className="login-field">
                   <label className="form-label">Senha</label>
                   <input
                     type="password"
-                    placeholder="Digite sua senha"
+                    placeholder="Senha"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     autoComplete="current-password"
                     required
                   />
-                  <p className="login-field__hint">
-                    Seus dados são conferidos antes de liberar o painel.
-                  </p>
                 </div>
 
                 <button type="submit" className="button-primary" disabled={loading}>
-                  {loading ? "Entrando..." : "Entrar no painel"}
+                  {loading ? "Entrando..." : "Entrar"}
                 </button>
               </form>
             )}
 
             <div className="login-card__footer">
-              <span>Painel interno de gestão de estoque</span>
+              <span>Sistema interno</span>
               <strong>{config.nome_empresa}</strong>
             </div>
           </div>

@@ -8,16 +8,13 @@ import PageHeader from "../components/PageHeader";
 import useAuth from "../hooks/useAuth";
 import { authJsonRequest } from "../services/api";
 
-
 export default function NovoFornecedor() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     nome: "",
-    documento: "",
     contato: "",
-    telefone: "",
-    email: "",
+    cidade: "",
   });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -65,10 +62,7 @@ export default function NovoFornecedor() {
   return (
     <Layout title="Novo Fornecedor">
       <div className="form-shell" style={{ maxWidth: "760px" }}>
-        <PageHeader
-          title="Cadastrar fornecedor"
-          description="Registre um novo parceiro comercial com os dados principais de contato."
-        />
+        <PageHeader title="Novo fornecedor" />
 
         {erro ? <div className="alert-error">{erro}</div> : null}
 
@@ -78,47 +72,27 @@ export default function NovoFornecedor() {
               <label className="form-label">Nome</label>
               <input
                 name="nome"
-                placeholder="Nome do fornecedor"
                 value={form.nome}
                 onChange={handleChange}
                 required
               />
             </div>
             <div>
-              <label className="form-label">Documento</label>
-              <input
-                name="documento"
-                placeholder="CPF ou CNPJ"
-                value={form.documento}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
               <label className="form-label">Contato</label>
               <input
                 name="contato"
-                placeholder="Pessoa ou setor responsável"
                 value={form.contato}
                 onChange={handleChange}
+                required
               />
             </div>
             <div>
-              <label className="form-label">Telefone</label>
+              <label className="form-label">Cidade</label>
               <input
-                name="telefone"
-                placeholder="Telefone"
-                value={form.telefone}
+                name="cidade"
+                value={form.cidade}
                 onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label className="form-label">Email</label>
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
+                required
               />
             </div>
           </div>
@@ -132,7 +106,7 @@ export default function NovoFornecedor() {
               Cancelar
             </button>
             <button type="submit" className="button-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar Fornecedor"}
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </form>

@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
@@ -9,66 +7,41 @@ from .estoque import registrar_movimentacao
 
 def _validar_itens_pedido(itens_data):
     if not itens_data:
-        raise ValidationError({"itens": "Adicione pelo menos um item ao pedido."})
+        raise ValidationError({"itens": "Adicione pelo menos um item a venda."})
 
     variacoes = set()
     for item in itens_data:
         variacao_id = item["variacao"].pk
         if variacao_id in variacoes:
             raise ValidationError(
-                {"itens": "Nao repita a mesma variacao em mais de uma linha do pedido."}
+                {"itens": "Nao repita a mesma variacao em mais de uma linha da venda."}
             )
         variacoes.add(variacao_id)
 
 
-def _itens_pedido_sao_iguais(pedido, itens_data):
-    itens_atuais = sorted(
-        (
-            item.variacao_id,
-            int(item.quantidade),
-            Decimal(item.preco_unitario),
-        )
-        for item in pedido.itens.all()
-    )
-    itens_novos = sorted(
-        (
-            item["variacao"].pk,
-            int(item["quantidade"]),
-            Decimal(item["preco_unitario"]),
-        )
-        for item in itens_data
-    )
-    return itens_atuais == itens_novos
-
-
-def _substituir_itens_pedido(pedido, itens_data):
-    PedidoVendaItem.objects.filter(pedido=pedido).delete()
-
+def _criar_itens_venda(pedido, itens_data):
+    itens_criados = []
     for item in itens_data:
-        PedidoVendaItem.objects.create(
-            pedido=pedido,
-            variacao=item["variacao"],
-            quantidade=item["quantidade"],
-            preco_unitario=item["preco_unitario"],
+        itens_criados.append(
+            PedidoVendaItem.objects.create(
+                pedido=pedido,
+                variacao=item["variacao"],
+                quantidade=item["quantidade"],
+                preco_unitario=item["preco_unitario"],
+            )
         )
+    return itens_criados
 
 
-def _aplicar_estoque_pedido(pedido, usuario=None):
-    itens = list(pedido.itens.select_related("variacao", "variacao__produto"))
-    if not itens:
-        raise ValidationError({"itens": "O pedido precisa ter itens para ser finalizado."})
-
+def _aplicar_estoque_venda(pedido, itens, usuario=None):
     for item in itens:
-        if item.movimentacao_saida_id:
-            continue
-
         try:
             movimentacao, _ = registrar_movimentacao(
                 variacao=item.variacao,
                 tipo=Movimentacao.Tipo.SAIDA,
                 quantidade=item.quantidade,
                 observacao=(
-                    f"Saida automatica do pedido {pedido.codigo} - "
+                    f"Saida automatica da venda {pedido.codigo} - "
                     f"{item.variacao.produto.nome}"
                 ),
                 usuario=usuario,
@@ -78,10 +51,10 @@ def _aplicar_estoque_pedido(pedido, usuario=None):
                 raise ValidationError(
                     {
                         "itens": (
-                            "Estoque insuficiente para finalizar o pedido. "
+                            "Estoque insuficiente para concluir a venda. "
                             f"{item.variacao.produto.nome} possui "
                             f"{item.variacao.saldo_atual} unidade(s) disponivel(is) "
-                            f"e o pedido solicita {item.quantidade}."
+                            f"e a venda solicita {item.quantidade}."
                         )
                     }
                 ) from error
@@ -91,70 +64,22 @@ def _aplicar_estoque_pedido(pedido, usuario=None):
         item.save(update_fields=["movimentacao_saida"])
 
 
-def _estornar_estoque_pedido(pedido, usuario=None):
-    itens = list(pedido.itens.select_related("variacao", "variacao__produto"))
-
-    for item in itens:
-        if not item.movimentacao_saida_id or item.movimentacao_estorno_id:
-            continue
-
-        movimentacao, _ = registrar_movimentacao(
-            variacao=item.variacao,
-            tipo=Movimentacao.Tipo.ENTRADA,
-            quantidade=item.quantidade,
-            observacao=(
-                f"Estorno automatico do pedido {pedido.codigo} - "
-                f"{item.variacao.produto.nome}"
-            ),
-            usuario=usuario,
-        )
-        item.movimentacao_estorno = movimentacao
-        item.save(update_fields=["movimentacao_estorno"])
-
-
 @transaction.atomic
 def salvar_pedido_venda(*, dados_pedido, itens_data, usuario=None, pedido=None):
+    if pedido is not None:
+        raise ValidationError(
+            {"detail": "As vendas registradas nao podem ser editadas."}
+        )
+
     _validar_itens_pedido(itens_data)
 
-    status_novo = dados_pedido.get("status") or PedidoVenda.Status.RASCUNHO
-    pedido_existente = pedido is not None
-    status_atual = pedido.status if pedido_existente else PedidoVenda.Status.RASCUNHO
-
-    if pedido_existente and pedido.status == PedidoVenda.Status.CANCELADO:
-        raise ValidationError({"status": "Pedidos cancelados nao podem ser alterados."})
-
-    if pedido_existente and pedido.status == PedidoVenda.Status.FINALIZADO:
-        if status_novo == PedidoVenda.Status.RASCUNHO:
-            raise ValidationError(
-                {"status": "Pedidos finalizados nao podem voltar para rascunho."}
-            )
-
-        if not _itens_pedido_sao_iguais(pedido, itens_data):
-            raise ValidationError(
-                {"itens": "Pedidos finalizados nao podem ter seus itens alterados."}
-            )
-
-    if not pedido_existente:
-        pedido = PedidoVenda(criado_por=usuario)
-
-    for field, value in dados_pedido.items():
-        setattr(pedido, field, value)
-
+    pedido = PedidoVenda(
+        criado_por=usuario,
+        cliente_nome=dados_pedido.get("cliente_nome", ""),
+        status=PedidoVenda.Status.FINALIZADO,
+    )
     pedido.save()
 
-    if not pedido_existente or status_atual == PedidoVenda.Status.RASCUNHO:
-        _substituir_itens_pedido(pedido, itens_data)
-
-    if (
-        status_novo == PedidoVenda.Status.FINALIZADO
-        and status_atual != PedidoVenda.Status.FINALIZADO
-    ):
-        _aplicar_estoque_pedido(pedido, usuario=usuario)
-
-    if (
-        status_novo == PedidoVenda.Status.CANCELADO
-        and status_atual == PedidoVenda.Status.FINALIZADO
-    ):
-        _estornar_estoque_pedido(pedido, usuario=usuario)
-
+    itens = _criar_itens_venda(pedido, itens_data)
+    _aplicar_estoque_venda(pedido, itens, usuario=usuario)
     return pedido

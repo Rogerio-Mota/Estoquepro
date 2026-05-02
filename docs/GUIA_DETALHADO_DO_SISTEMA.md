@@ -1,5 +1,14 @@
 # Guia Detalhado Do Sistema
 
+## Aviso
+
+Este arquivo passou a ser material legado de referencia historica.
+
+Para estudar a estrutura atual do projeto, use como fonte principal:
+
+- [docs/GUIA_ESTUDO_CODIGO_DETALHADO.md](./GUIA_ESTUDO_CODIGO_DETALHADO.md)
+- [docs/GUIA_ESTUDO_CODIGO.md](./GUIA_ESTUDO_CODIGO.md)
+
 ## 1. Objetivo Deste Documento
 
 Este arquivo foi criado para servir como material de explicacao tecnica e funcional do projeto `EstoquePro`.

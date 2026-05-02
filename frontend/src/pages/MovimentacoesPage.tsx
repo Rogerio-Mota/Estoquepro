@@ -7,57 +7,37 @@ import Layout from "../components/Layout";
 import PageHeader from "../components/PageHeader";
 import PaginationControls from "../components/PaginationControls";
 import { authJsonRequest, extractCollection } from "../services/api";
-import { formatDateTime } from "../utils/formatters";
+import { formatDate } from "../utils/formatters";
 
 const ITENS_POR_PAGINA = 6;
+const PERIOD_OPTIONS = [
+  { value: "dia", label: "Dia" },
+  { value: "semana", label: "Semana" },
+  { value: "mes", label: "Mês" },
+];
 
 function getMovementActionLabel(movimentacao) {
   const observacao = (movimentacao.observacao || "").toLowerCase();
 
-  if (observacao.includes("estorno")) {
-    return "Estorno";
-  }
-
-  if (observacao.includes("pedido")) {
-    return "Pedido";
-  }
-
-  if (observacao.includes("nf-e") || observacao.includes("nota fiscal")) {
-    return "Importação";
+  if (observacao.includes("venda") || observacao.includes("pedido")) {
+    return "Venda";
   }
 
   if (observacao.includes("cadastro")) {
-    return "Cadastro inicial";
+    return "Cadastro";
   }
 
-  return movimentacao.responsavel_username ? "Ajuste manual" : "Automação";
-}
-
-function getMovementResponsibleMeta(movimentacao) {
-  if (!movimentacao.responsavel_username) {
-    return "Processo automático do sistema";
-  }
-
-  if (movimentacao.responsavel_tipo === "admin") {
-    return "Administrador";
-  }
-
-  if (movimentacao.responsavel_tipo === "funcionario") {
-    return "Funcionário";
-  }
-
-  return "Usuário interno";
+  return movimentacao.tipo === "entrada" ? "Entrada manual" : "Saída manual";
 }
 
 function buildVariationSummary(movimentacao) {
   return [
-    movimentacao.marca,
     movimentacao.cor,
     movimentacao.tamanho ? `Tam. ${movimentacao.tamanho}` : null,
     movimentacao.numeracao ? `Num. ${movimentacao.numeracao}` : null,
   ]
     .filter(Boolean)
-    .join(" • ");
+    .join(" | ");
 }
 
 export default function MovimentacoesPage() {
@@ -65,13 +45,15 @@ export default function MovimentacoesPage() {
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [busca, setBusca] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("");
+  const [responsavelFiltro, setResponsavelFiltro] = useState("");
+  const [periodo, setPeriodo] = useState("mes");
   const [paginaAtual, setPaginaAtual] = useState(1);
 
   useEffect(() => {
     async function carregarMovimentacoes() {
       try {
         const data = await authJsonRequest(
-          "/movimentacoes/",
+          `/movimentacoes/?periodo=${periodo}`,
           {},
           "Erro ao carregar movimentações.",
         );
@@ -82,7 +64,15 @@ export default function MovimentacoesPage() {
     }
 
     carregarMovimentacoes();
-  }, []);
+  }, [periodo]);
+
+  const responsaveis = useMemo(() => {
+    return [...new Set(
+      movimentacoes
+        .map((movimentacao) => movimentacao.responsavel_username)
+        .filter(Boolean),
+    )].sort((first, second) => first.localeCompare(second, "pt-BR"));
+  }, [movimentacoes]);
 
   const movimentacoesFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -94,12 +84,16 @@ export default function MovimentacoesPage() {
         movimentacao.marca?.toLowerCase().includes(termo) ||
         movimentacao.cor?.toLowerCase().includes(termo) ||
         movimentacao.observacao?.toLowerCase().includes(termo) ||
+        movimentacao.fornecedor_nome?.toLowerCase().includes(termo) ||
         movimentacao.responsavel_username?.toLowerCase().includes(termo);
       const combinaTipo = !tipoFiltro || movimentacao.tipo === tipoFiltro;
+      const combinaResponsavel =
+        !responsavelFiltro ||
+        movimentacao.responsavel_username === responsavelFiltro;
 
-      return combinaBusca && combinaTipo;
+      return combinaBusca && combinaTipo && combinaResponsavel;
     });
-  }, [movimentacoes, busca, tipoFiltro]);
+  }, [movimentacoes, busca, tipoFiltro, responsavelFiltro]);
 
   const totalPaginas = Math.max(
     1,
@@ -111,13 +105,7 @@ export default function MovimentacoesPage() {
     return movimentacoesFiltradas.slice(inicio, inicio + ITENS_POR_PAGINA);
   }, [movimentacoesFiltradas, paginaSegura]);
 
-  function atualizarBusca(value) {
-    setBusca(value);
-    setPaginaAtual(1);
-  }
-
-  function atualizarTipo(value) {
-    setTipoFiltro(value);
+  function resetarPagina() {
     setPaginaAtual(1);
   }
 
@@ -132,8 +120,7 @@ export default function MovimentacoesPage() {
   return (
     <Layout title="Movimentações">
       <PageHeader
-        title="Histórico operacional"
-        description="Veja de forma clara o que entrou, o que saiu e quem registrou cada ação no estoque."
+        title="Movimentações"
         action={
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
             <button
@@ -141,21 +128,14 @@ export default function MovimentacoesPage() {
               className="button-secondary"
               onClick={() => navigate("/novo-pedido")}
             >
-              Novo pedido
-            </button>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => navigate("/importar-nota-fiscal")}
-            >
-              Importar NF-e
+              Nova venda
             </button>
             <button
               type="button"
               className="button-primary"
               onClick={() => navigate("/nova-movimentacao")}
             >
-              Ajuste manual
+              Nova movimentação
             </button>
           </div>
         }
@@ -165,18 +145,53 @@ export default function MovimentacoesPage() {
         <div className="filters-grid">
           <input
             type="text"
-            placeholder="Buscar por produto, detalhe ou responsável"
+            placeholder="Buscar"
             value={busca}
-            onChange={(event) => atualizarBusca(event.target.value)}
+            onChange={(event) => {
+              setBusca(event.target.value);
+              resetarPagina();
+            }}
           />
 
           <select
-            value={tipoFiltro}
-            onChange={(event) => atualizarTipo(event.target.value)}
+            value={periodo}
+            onChange={(event) => {
+              setPeriodo(event.target.value);
+              resetarPagina();
+            }}
           >
-            <option value="">Todos os tipos</option>
+            {PERIOD_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={tipoFiltro}
+            onChange={(event) => {
+              setTipoFiltro(event.target.value);
+              resetarPagina();
+            }}
+          >
+            <option value="">Tipos</option>
             <option value="entrada">Entrada</option>
             <option value="saida">Saída</option>
+          </select>
+
+          <select
+            value={responsavelFiltro}
+            onChange={(event) => {
+              setResponsavelFiltro(event.target.value);
+              resetarPagina();
+            }}
+          >
+            <option value="">Responsáveis</option>
+            {responsaveis.map((responsavel) => (
+              <option key={responsavel} value={responsavel}>
+                {responsavel}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -187,17 +202,16 @@ export default function MovimentacoesPage() {
             <thead>
               <tr>
                 <th>Produto</th>
-                <th>Ação</th>
-                <th>Responsável</th>
                 <th>Tipo</th>
-                <th>Quantidade</th>
+                <th>Qtd</th>
+                <th>Responsável</th>
                 <th>Data</th>
               </tr>
             </thead>
             <tbody>
               {movimentacoesPaginadas.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={5}>
                     <EmptyState>Nenhuma movimentação encontrada.</EmptyState>
                   </td>
                 </tr>
@@ -209,23 +223,7 @@ export default function MovimentacoesPage() {
                         {movimentacao.produto_nome}
                       </div>
                       <div className="table-cell-meta">
-                        {buildVariationSummary(movimentacao) || "Sem variação complementar"}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="table-cell-primary">
-                        {getMovementActionLabel(movimentacao)}
-                      </div>
-                      <div className="table-cell-meta">
-                        {movimentacao.observacao || "Movimentação registrada no estoque."}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="table-cell-primary">
-                        {movimentacao.responsavel_username || "Sistema"}
-                      </div>
-                      <div className="table-cell-meta">
-                        {getMovementResponsibleMeta(movimentacao)}
+                        {buildVariationSummary(movimentacao) || movimentacao.marca || "-"}
                       </div>
                     </td>
                     <td>
@@ -240,7 +238,15 @@ export default function MovimentacoesPage() {
                       </span>
                     </td>
                     <td>{movimentacao.quantidade}</td>
-                    <td>{formatDateTime(movimentacao.data)}</td>
+                    <td>
+                      <div className="table-cell-primary">
+                        {movimentacao.responsavel_username || "Sistema"}
+                      </div>
+                      <div className="table-cell-meta">
+                        {movimentacao.fornecedor_nome || getMovementActionLabel(movimentacao)}
+                      </div>
+                    </td>
+                    <td>{formatDate(movimentacao.data_referencia || movimentacao.data)}</td>
                   </tr>
                 ))
               )}

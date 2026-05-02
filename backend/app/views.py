@@ -2,10 +2,9 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import F, IntegerField, Sum
 from django.db.models.functions import Coalesce
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,11 +12,8 @@ from rest_framework.views import APIView
 from .models import Fornecedor, Movimentacao, PedidoVenda, Produto, Variacao
 from .permissions import IsAdminEmpresa, IsAdminOrFuncionario, IsAdminOrReadOnly
 from .serializers import (
-    ConfiguracaoSistemaSerializer,
     EntradaEstoqueSerializer,
     FornecedorSerializer,
-    NotaFiscalImportacaoAplicarSerializer,
-    NotaFiscalImportacaoPreviewSerializer,
     MovimentacaoSerializer,
     PedidoVendaSerializer,
     ProdutoSerializer,
@@ -27,15 +23,11 @@ from .serializers import (
     VariacaoSerializer,
 )
 from .services import (
-    aplicar_importacao_nota_fiscal,
     criar_administrador_inicial,
     existe_administrador_configurado,
-    gerar_relatorio_mensal,
-    gerar_relatorio_reposicao,
-    limpar_importacao_nota_fiscal,
-    obter_configuracao_sistema,
-    parse_nota_fiscal,
+    gerar_relatorio_vendas,
     registrar_movimentacao,
+    resolver_periodo_relatorio,
 )
 
 
@@ -45,20 +37,34 @@ def _raise_drf_validation(error):
     raise ValidationError(error.messages)
 
 
-def _usuario_admin(user):
+def _usuario_eh_admin(user):
     return bool(
-        user.is_authenticated
-        and (
-            user.is_superuser
-            or (hasattr(user, "perfil") and user.perfil.tipo == "admin")
-        )
+        user.is_superuser
+        or (hasattr(user, "perfil") and user.perfil.tipo == "admin")
     )
+
+
+def _existe_outro_admin(user_id):
+    return User.objects.exclude(pk=user_id).filter(
+        is_superuser=True
+    ).exists() or User.objects.exclude(pk=user_id).filter(
+        perfil__tipo="admin"
+    ).exists()
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = User.objects.select_related("perfil").order_by("username")
     serializer_class = UsuarioSerializer
     permission_classes = [IsAdminEmpresa]
+
+    def destroy(self, request, *args, **kwargs):
+        usuario = self.get_object()
+        if _usuario_eh_admin(usuario) and not _existe_outro_admin(usuario.pk):
+            raise ValidationError(
+                {"detail": "O sistema precisa manter um administrador principal."}
+            )
+
+        return super().destroy(request, *args, **kwargs)
 
 
 class UsuarioLogadoView(APIView):
@@ -102,45 +108,6 @@ class PrimeiroAcessoView(APIView):
         )
 
 
-class ConfiguracaoSistemaView(APIView):
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def get(self, request):
-        try:
-            configuracao = obter_configuracao_sistema()
-        except DjangoValidationError as error:
-            _raise_drf_validation(error)
-
-        serializer = ConfiguracaoSistemaSerializer(
-            configuracao,
-            context={"request": request},
-        )
-        return Response(serializer.data)
-
-    def patch(self, request):
-        if not _usuario_admin(request.user):
-            return Response(
-                {"detail": "Você não tem permissão para atualizar as configurações."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        try:
-            configuracao = obter_configuracao_sistema()
-        except DjangoValidationError as error:
-            _raise_drf_validation(error)
-
-        serializer = ConfiguracaoSistemaSerializer(
-            configuracao,
-            data=request.data,
-            partial=True,
-            context={"request": request},
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save(atualizado_por=request.user)
-        return Response(serializer.data)
-
-
 class BaseMovimentacaoEstoqueView(APIView):
     permission_classes = [IsAdminOrFuncionario]
     serializer_class = None
@@ -158,6 +125,8 @@ class BaseMovimentacaoEstoqueView(APIView):
                 quantidade=serializer.validated_data["quantidade"],
                 observacao=serializer.validated_data.get("observacao") or "",
                 usuario=request.user,
+                fornecedor=serializer.validated_data.get("fornecedor"),
+                data_referencia=serializer.validated_data.get("data_referencia"),
             )
         except DjangoValidationError as error:
             _raise_drf_validation(error)
@@ -182,102 +151,16 @@ class EntradaEstoqueView(BaseMovimentacaoEstoqueView):
 class SaidaEstoqueView(BaseMovimentacaoEstoqueView):
     serializer_class = SaidaEstoqueSerializer
     tipo_movimentacao = Movimentacao.Tipo.SAIDA
-    mensagem_sucesso = "Saída registrada com sucesso."
+    mensagem_sucesso = "Saida registrada com sucesso."
 
 
-class NotaFiscalImportacaoPreviewView(APIView):
-    permission_classes = [IsAdminOrFuncionario]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def post(self, request):
-        serializer = NotaFiscalImportacaoPreviewSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        try:
-            preview = parse_nota_fiscal(serializer.validated_data["arquivo"])
-        except DjangoValidationError as error:
-            _raise_drf_validation(error)
-
-        return Response(preview)
-
-
-class NotaFiscalImportacaoAplicarView(APIView):
-    permission_classes = [IsAdminOrFuncionario]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def post(self, request):
-        serializer = NotaFiscalImportacaoAplicarSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        try:
-            resultado = aplicar_importacao_nota_fiscal(
-                arquivo=serializer.validated_data["arquivo"],
-                mapeamentos=serializer.validated_data["mapeamentos"],
-                fornecedor_resolucao=serializer.validated_data.get("fornecedor"),
-                usuario=request.user,
-            )
-        except DjangoValidationError as error:
-            _raise_drf_validation(error)
-
-        return Response(
-            {
-                "message": "Nota fiscal importada com sucesso.",
-                **resultado,
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
-
-class NotaFiscalImportacaoLimparView(APIView):
-    permission_classes = [IsAdminEmpresa]
-
-    def delete(self, request, importacao_id):
-        try:
-            resultado = limpar_importacao_nota_fiscal(
-                importacao_id=importacao_id,
-                usuario=request.user,
-            )
-        except DjangoValidationError as error:
-            _raise_drf_validation(error)
-
-        message = "Importacao removida com sucesso."
-        if resultado.get("itens_sem_vinculo"):
-            message = (
-                "Importacao removida com sucesso. "
-                "Alguns itens antigos nao tinham vinculo de estoque e foram apenas "
-                "retirados do historico de importacao."
-            )
-
-        return Response(
-            {
-                "message": message,
-                **resultado,
-            }
-        )
-
-
-class RelatorioMensalView(APIView):
+class RelatorioVendasView(APIView):
     permission_classes = [IsAdminOrFuncionario]
 
     def get(self, request):
         try:
-            relatorio = gerar_relatorio_mensal(
-                ano=request.query_params.get("ano"),
-                mes=request.query_params.get("mes"),
-            )
-        except DjangoValidationError as error:
-            _raise_drf_validation(error)
-
-        return Response(relatorio)
-
-
-class RelatorioReposicaoView(APIView):
-    permission_classes = [IsAdminOrFuncionario]
-
-    def get(self, request):
-        try:
-            relatorio = gerar_relatorio_reposicao(
-                dias_base=request.query_params.get("dias_base", 30)
+            relatorio = gerar_relatorio_vendas(
+                periodo=request.query_params.get("periodo", "mes"),
             )
         except DjangoValidationError as error:
             _raise_drf_validation(error)
@@ -286,11 +169,11 @@ class RelatorioReposicaoView(APIView):
 
 
 class FornecedorViewSet(viewsets.ModelViewSet):
-    queryset = Fornecedor.objects.order_by("nome")
+    queryset = Fornecedor.objects.prefetch_related("produtos").order_by("nome")
     serializer_class = FornecedorSerializer
     permission_classes = [IsAdminOrReadOnly]
-    search_fields = ["nome", "documento", "contato", "email"]
-    ordering_fields = ["nome", "criado_em"]
+    search_fields = ["nome", "contato", "cidade", "produtos__nome"]
+    ordering_fields = ["nome", "cidade", "criado_em"]
 
 
 class ProdutoViewSet(viewsets.ModelViewSet):
@@ -342,51 +225,60 @@ class VariacaoViewSet(viewsets.ModelViewSet):
 
 
 class MovimentacaoViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = (
-        Movimentacao.objects.select_related(
-            "variacao",
-            "variacao__produto",
-            "responsavel",
-            "responsavel__perfil",
-        )
-        .order_by("-data")
-    )
+    queryset = Movimentacao.objects.none()
     serializer_class = MovimentacaoSerializer
     permission_classes = [IsAdminOrFuncionario]
-    filterset_fields = ["tipo", "variacao", "variacao__produto"]
+    filterset_fields = ["tipo", "variacao", "variacao__produto", "fornecedor"]
     search_fields = [
         "variacao__produto__nome",
         "variacao__produto__marca",
         "variacao__produto__sku",
         "observacao",
         "responsavel__username",
+        "fornecedor__nome",
     ]
-    ordering_fields = ["data", "quantidade"]
+    ordering_fields = ["data", "data_referencia", "quantidade"]
+
+    def get_queryset(self):
+        queryset = (
+            Movimentacao.objects.select_related(
+                "variacao",
+                "variacao__produto",
+                "fornecedor",
+                "responsavel",
+                "responsavel__perfil",
+            )
+            .order_by("-data", "-id")
+        )
+        periodo = self.request.query_params.get("periodo")
+        if periodo:
+            try:
+                recorte = resolver_periodo_relatorio(periodo)
+            except DjangoValidationError as error:
+                _raise_drf_validation(error)
+            queryset = queryset.filter(data_referencia__range=(recorte["inicio"].date(), recorte["fim"].date()))
+
+        return queryset
 
 
-class PedidoVendaViewSet(viewsets.ModelViewSet):
+class PedidoVendaViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     queryset = (
-        PedidoVenda.objects.select_related("criado_por")
+        PedidoVenda.objects.filter(status=PedidoVenda.Status.FINALIZADO)
+        .select_related("criado_por")
         .prefetch_related("itens", "itens__variacao", "itens__variacao__produto")
         .order_by("-criado_em")
     )
     serializer_class = PedidoVendaSerializer
     permission_classes = [IsAdminOrFuncionario]
-    filterset_fields = ["status", "criado_por"]
     search_fields = [
         "cliente_nome",
-        "cliente_documento",
         "id",
         "itens__variacao__produto__nome",
         "itens__variacao__produto__sku",
     ]
-    ordering_fields = ["criado_em", "atualizado_em", "status"]
-
-    def destroy(self, request, *args, **kwargs):
-        pedido = self.get_object()
-        if pedido.status != PedidoVenda.Status.RASCUNHO:
-            raise ValidationError(
-                {"detail": "Apenas pedidos em rascunho podem ser excluidos."}
-            )
-
-        return super().destroy(request, *args, **kwargs)
+    ordering_fields = ["criado_em", "atualizado_em"]

@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
 
-export default function Layout({ title, children, showTopbar = true }) {
+export default function Layout({ title, children, showTopbar = false }) {
   const isMobile = useIsMobile();
   const [menuAberto, setMenuAberto] = useState(false);
   const mainClassName = showTopbar

@@ -16,7 +16,6 @@ import {
 import useAuth from "../hooks/useAuth";
 import { authFetch, authJsonRequest, extractCollection } from "../services/api";
 
-
 export default function NovoProduto() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -148,19 +147,16 @@ export default function NovoProduto() {
 
   if (user?.tipo !== "admin") {
     return (
-      <Layout title="Novo Produto">
+      <Layout title="Novo produto">
         <AccessNotice>Acesso restrito ao administrador.</AccessNotice>
       </Layout>
     );
   }
 
   return (
-    <Layout title="Novo Produto">
+    <Layout title="Novo produto">
       <div className="form-shell">
-        <PageHeader
-          title="Cadastrar produto"
-          description="Cadastre o produto e, se houver saldo inicial, o sistema registra a entrada automaticamente."
-        />
+        <PageHeader title="Novo produto" />
 
         {erro ? <div className="alert-error">{erro}</div> : null}
 
@@ -172,7 +168,7 @@ export default function NovoProduto() {
                 <label className="form-label">Nome do produto</label>
                 <input
                   name="nome"
-                  placeholder="Ex.: Camisa Polo"
+                  placeholder="Ex.: Camisa polo"
                   value={form.nome}
                   onChange={handleChange}
                   required
@@ -292,10 +288,7 @@ export default function NovoProduto() {
           </div>
 
           <div className="highlight-panel">
-            <h3 className="section-title">Primeira variação e entrada inicial</h3>
-            <p className="table-inline-note">
-              O saldo inicial gera uma entrada automática no histórico do estoque.
-            </p>
+            <h3 className="section-title">Primeira variação</h3>
             <div className="form-grid">
               <div>
                 <label className="form-label">Cor</label>
@@ -363,7 +356,7 @@ export default function NovoProduto() {
               Cancelar
             </button>
             <button type="submit" className="button-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar Produto"}
+              {salvando ? "Salvando..." : "Salvar produto"}
             </button>
           </div>
         </form>

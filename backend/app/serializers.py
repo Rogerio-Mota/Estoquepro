@@ -1,13 +1,10 @@
-import json
-
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
 from rest_framework import serializers
 
 from .models import (
-    ConfiguracaoSistema,
     Fornecedor,
-    ImportacaoNotaFiscal,
     Movimentacao,
     PedidoVenda,
     PedidoVendaItem,
@@ -31,6 +28,12 @@ def _validate_model_instance(instance):
     return instance
 
 
+def _admins_queryset():
+    return User.objects.filter(
+        Q(is_superuser=True) | Q(perfil__tipo=PerfilUsuario.Tipo.ADMIN)
+    )
+
+
 class UsuarioSerializer(serializers.ModelSerializer):
     tipo = serializers.ChoiceField(choices=PerfilUsuario.Tipo.choices, source="perfil.tipo")
     password = serializers.CharField(write_only=True, required=False)
@@ -42,8 +45,47 @@ class UsuarioSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if self.instance is None and not attrs.get("password"):
             raise serializers.ValidationError(
-                {"password": "A senha é obrigatória para criar um usuário."}
+                {"password": "A senha e obrigatoria para criar um usuario."}
             )
+
+        perfil_data = attrs.get("perfil", {})
+        tipo_desejado = perfil_data.get(
+            "tipo",
+            self.instance.perfil.tipo
+            if self.instance is not None and hasattr(self.instance, "perfil")
+            else PerfilUsuario.Tipo.FUNCIONARIO,
+        )
+        instancia_eh_admin = bool(
+            self.instance
+            and (
+                self.instance.is_superuser
+                or (
+                    hasattr(self.instance, "perfil")
+                    and self.instance.perfil.tipo == PerfilUsuario.Tipo.ADMIN
+                )
+            )
+        )
+
+        if tipo_desejado == PerfilUsuario.Tipo.ADMIN:
+            admins_existentes = _admins_queryset()
+            if instancia_eh_admin:
+                admins_existentes = admins_existentes.exclude(pk=self.instance.pk)
+
+            if admins_existentes.exists():
+                raise serializers.ValidationError(
+                    {"tipo": "O sistema permite apenas um administrador principal."}
+                )
+
+        if (
+            self.instance is not None
+            and instancia_eh_admin
+            and tipo_desejado != PerfilUsuario.Tipo.ADMIN
+            and not _admins_queryset().exclude(pk=self.instance.pk).exists()
+        ):
+            raise serializers.ValidationError(
+                {"tipo": "O sistema precisa manter um administrador principal."}
+            )
+
         return attrs
 
     def create(self, validated_data):
@@ -109,17 +151,21 @@ class UsuarioLogadoSerializer(serializers.ModelSerializer):
 
 
 class FornecedorSerializer(serializers.ModelSerializer):
+    produtos_fornecidos = serializers.SerializerMethodField()
+
     class Meta:
         model = Fornecedor
         fields = [
             "id",
             "nome",
-            "documento",
             "contato",
-            "telefone",
-            "email",
+            "cidade",
+            "produtos_fornecidos",
             "criado_em",
         ]
+
+    def get_produtos_fornecidos(self, obj):
+        return [produto.nome for produto in obj.produtos.order_by("nome")]
 
 
 class VariacaoSerializer(serializers.ModelSerializer):
@@ -196,11 +242,6 @@ class ProdutoSerializer(serializers.ModelSerializer):
             "subcategoria",
             "marca",
             "sku",
-            "codigo_barras",
-            "ncm",
-            "cest",
-            "cfop",
-            "unidade_comercial",
             "fornecedor",
             "fornecedor_nome",
             "preco_custo",
@@ -232,6 +273,7 @@ class MovimentacaoSerializer(serializers.ModelSerializer):
     cor = serializers.ReadOnlyField(source="variacao.cor")
     tamanho = serializers.ReadOnlyField(source="variacao.tamanho")
     numeracao = serializers.ReadOnlyField(source="variacao.numeracao")
+    fornecedor_nome = serializers.ReadOnlyField(source="fornecedor.nome")
     responsavel_username = serializers.ReadOnlyField(source="responsavel.username")
     responsavel_tipo = serializers.ReadOnlyField(source="responsavel.perfil.tipo")
 
@@ -248,9 +290,12 @@ class MovimentacaoSerializer(serializers.ModelSerializer):
             "tipo",
             "quantidade",
             "observacao",
+            "fornecedor",
+            "fornecedor_nome",
             "responsavel",
             "responsavel_username",
             "responsavel_tipo",
+            "data_referencia",
             "data",
         ]
 
@@ -264,183 +309,12 @@ class MovimentacaoEstoqueSerializer(serializers.Serializer):
 
 
 class EntradaEstoqueSerializer(MovimentacaoEstoqueSerializer):
-    pass
+    fornecedor = serializers.PrimaryKeyRelatedField(queryset=Fornecedor.objects.all())
+    data_referencia = serializers.DateField()
 
 
 class SaidaEstoqueSerializer(MovimentacaoEstoqueSerializer):
     pass
-
-
-class NotaFiscalImportacaoPreviewSerializer(serializers.Serializer):
-    arquivo = serializers.FileField()
-
-
-class NotaFiscalImportacaoFornecedorResolverSerializer(serializers.Serializer):
-    modo = serializers.ChoiceField(choices=["manter", "usar_existente", "criar"])
-    fornecedor = serializers.PrimaryKeyRelatedField(
-        queryset=Fornecedor.objects.all(),
-        required=False,
-        allow_null=True,
-    )
-    nome = serializers.CharField(required=False, allow_blank=True)
-    documento = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    contato = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    telefone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
-
-    def validate(self, attrs):
-        modo = attrs["modo"]
-
-        if modo == "usar_existente" and not attrs.get("fornecedor"):
-            raise serializers.ValidationError(
-                {"fornecedor": "Selecione um fornecedor existente para vincular a importacao."}
-            )
-
-        if modo == "criar" and not (attrs.get("nome") or "").strip():
-            raise serializers.ValidationError(
-                {"nome": "Informe o nome do fornecedor para concluir o cadastro."}
-            )
-
-        return attrs
-
-
-class NotaFiscalImportacaoNovaVariacaoSerializer(serializers.Serializer):
-    produto = serializers.PrimaryKeyRelatedField(queryset=Produto.objects.all())
-    cor = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    tamanho = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    numeracao = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-
-
-class NotaFiscalImportacaoNovoProdutoSerializer(serializers.Serializer):
-    nome = serializers.CharField()
-    marca = serializers.CharField()
-    categoria = serializers.CharField()
-    subcategoria = serializers.CharField()
-    sku = serializers.CharField()
-    codigo_barras = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    ncm = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    cest = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    cfop = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    unidade_comercial = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        allow_null=True,
-    )
-    preco_custo = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        required=False,
-        allow_null=True,
-    )
-    preco_venda = serializers.DecimalField(max_digits=10, decimal_places=2)
-    estoque_minimo = serializers.IntegerField(required=False, min_value=0, default=0)
-    fornecedor = serializers.PrimaryKeyRelatedField(
-        queryset=Fornecedor.objects.all(),
-        required=False,
-        allow_null=True,
-    )
-    cor = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    tamanho = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    numeracao = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-
-
-class NotaFiscalImportacaoMapeamentoItemSerializer(serializers.Serializer):
-    indice = serializers.IntegerField(min_value=1)
-    variacao = serializers.PrimaryKeyRelatedField(
-        queryset=Variacao.objects.select_related("produto").all(),
-        required=False,
-        allow_null=True,
-    )
-    nova_variacao = NotaFiscalImportacaoNovaVariacaoSerializer(
-        required=False,
-        allow_null=True,
-    )
-    novo_produto = NotaFiscalImportacaoNovoProdutoSerializer(
-        required=False,
-        allow_null=True,
-    )
-
-    def validate(self, attrs):
-        resolucoes = [
-            attrs.get("variacao"),
-            attrs.get("nova_variacao"),
-            attrs.get("novo_produto"),
-        ]
-        resolucoes_preenchidas = [item for item in resolucoes if item]
-
-        if len(resolucoes_preenchidas) != 1:
-            raise serializers.ValidationError(
-                (
-                    "Cada item da nota deve usar exatamente uma resolução: "
-                    "variação existente, nova variação ou novo produto."
-                )
-            )
-
-        return attrs
-
-
-class NotaFiscalImportacaoAplicarSerializer(serializers.Serializer):
-    arquivo = serializers.FileField()
-    fornecedor = serializers.CharField(required=False, allow_blank=True, default="")
-    mapeamentos = serializers.CharField()
-
-    def validate_mapeamentos(self, value):
-        payload = self._parse_json_payload(
-            value,
-            fallback_message="Não foi possível interpretar os mapeamentos dos itens.",
-        )
-        if not isinstance(payload, list):
-            raise serializers.ValidationError(
-                "Os mapeamentos devem ser enviados em formato de lista."
-            )
-
-        serializer = NotaFiscalImportacaoMapeamentoItemSerializer(data=payload, many=True)
-        serializer.is_valid(raise_exception=True)
-        return serializer.validated_data
-
-    def validate_fornecedor(self, value):
-        if not value:
-            return {"modo": "manter"}
-
-        payload = self._parse_json_payload(
-            value,
-            fallback_message="Não foi possível interpretar os dados do fornecedor.",
-        )
-        if not isinstance(payload, dict):
-            raise serializers.ValidationError(
-                "Os dados do fornecedor devem ser enviados em formato de objeto."
-            )
-
-        serializer = NotaFiscalImportacaoFornecedorResolverSerializer(data=payload)
-        serializer.is_valid(raise_exception=True)
-        return serializer.validated_data
-
-    @staticmethod
-    def _parse_json_payload(value, fallback_message):
-        try:
-            return json.loads(value)
-        except json.JSONDecodeError as error:
-            raise serializers.ValidationError(fallback_message) from error
-
-
-class ImportacaoNotaFiscalSerializer(serializers.ModelSerializer):
-    importado_por_username = serializers.ReadOnlyField(source="importado_por.username")
-
-    class Meta:
-        model = ImportacaoNotaFiscal
-        fields = [
-            "id",
-            "chave_acesso",
-            "numero",
-            "serie",
-            "fornecedor_nome",
-            "fornecedor_documento",
-            "data_emissao",
-            "arquivo_nome",
-            "importado_por",
-            "importado_por_username",
-            "criado_em",
-        ]
 
 
 class PedidoVendaItemSerializer(serializers.ModelSerializer):
@@ -478,7 +352,6 @@ class PedidoVendaItemSerializer(serializers.ModelSerializer):
             "subtotal",
             "saldo_atual",
             "movimentacao_saida",
-            "movimentacao_estorno",
         ]
         read_only_fields = [
             "id",
@@ -491,7 +364,6 @@ class PedidoVendaItemSerializer(serializers.ModelSerializer):
             "subtotal",
             "saldo_atual",
             "movimentacao_saida",
-            "movimentacao_estorno",
         ]
 
     def get_subtotal(self, obj):
@@ -510,9 +382,6 @@ class PedidoVendaSerializer(serializers.ModelSerializer):
             "id",
             "codigo",
             "cliente_nome",
-            "cliente_documento",
-            "status",
-            "observacao",
             "itens",
             "valor_total",
             "criado_por",
@@ -537,14 +406,10 @@ class PedidoVendaSerializer(serializers.ModelSerializer):
         itens = attrs.get("itens")
         if not itens:
             raise serializers.ValidationError(
-                {"itens": "Adicione pelo menos um item ao pedido."}
+                {"itens": "Adicione pelo menos um item a venda."}
             )
 
-        instance = (
-            PedidoVenda.objects.get(pk=self.instance.pk)
-            if self.instance is not None
-            else PedidoVenda()
-        )
+        instance = PedidoVenda()
         for field, value in attrs.items():
             if field != "itens":
                 setattr(instance, field, value)
@@ -564,93 +429,3 @@ class PedidoVendaSerializer(serializers.ModelSerializer):
             )
         except DjangoValidationError as error:
             _raise_drf_validation(error)
-
-    def update(self, instance, validated_data):
-        from .services import salvar_pedido_venda
-
-        itens_data = validated_data.pop("itens")
-        usuario = self.context.get("request").user if self.context.get("request") else None
-        try:
-            return salvar_pedido_venda(
-                pedido=instance,
-                dados_pedido=validated_data,
-                itens_data=itens_data,
-                usuario=usuario,
-            )
-        except DjangoValidationError as error:
-            _raise_drf_validation(error)
-
-
-class ConfiguracaoSistemaSerializer(serializers.ModelSerializer):
-    logo_url = serializers.SerializerMethodField(read_only=True)
-    remover_logo = serializers.BooleanField(write_only=True, required=False, default=False)
-    atualizado_por_username = serializers.ReadOnlyField(source="atualizado_por.username")
-
-    class Meta:
-        model = ConfiguracaoSistema
-        fields = [
-            "id",
-            "nome_empresa",
-            "descricao_empresa",
-            "logo",
-            "logo_url",
-            "remover_logo",
-            "cor_primaria",
-            "cor_secundaria",
-            "cor_acento",
-            "atualizado_por",
-            "atualizado_por_username",
-            "atualizado_em",
-        ]
-        read_only_fields = [
-            "id",
-            "logo_url",
-            "atualizado_por",
-            "atualizado_por_username",
-            "atualizado_em",
-        ]
-
-    def get_logo_url(self, obj):
-        if not obj.logo:
-            return None
-
-        request = self.context.get("request")
-        if request:
-            return request.build_absolute_uri(obj.logo.url)
-        return obj.logo.url
-
-    def validate(self, attrs):
-        instance = self.instance or ConfiguracaoSistema()
-        remover_logo = attrs.pop("remover_logo", False)
-
-        for field, value in attrs.items():
-            setattr(instance, field, value)
-
-        if remover_logo:
-            instance.logo = None
-
-        _validate_model_instance(instance)
-        attrs["remover_logo"] = remover_logo
-        return attrs
-
-    def update(self, instance, validated_data):
-        remover_logo = validated_data.pop("remover_logo", False)
-        novo_logo = validated_data.get("logo")
-        logo_storage = instance.logo.storage if instance.logo else None
-        logo_anterior_nome = instance.logo.name if instance.logo else None
-
-        for field, value in validated_data.items():
-            setattr(instance, field, value)
-
-        if remover_logo:
-            instance.logo = None
-
-        instance.save()
-
-        if logo_storage and logo_anterior_nome:
-            logo_atual_nome = instance.logo.name if instance.logo else None
-
-            if remover_logo or (novo_logo and logo_atual_nome != logo_anterior_nome):
-                logo_storage.delete(logo_anterior_nome)
-
-        return instance

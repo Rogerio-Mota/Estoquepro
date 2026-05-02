@@ -5,90 +5,57 @@ import EmptyState from "../components/EmptyState";
 import Layout from "../components/Layout";
 import PageHeader from "../components/PageHeader";
 import SummaryCard from "../components/SummaryCard";
-import useSystemConfig from "../hooks/useSystemConfig";
-import { authJsonRequest } from "../services/api";
-import {
-  createReportExportModel,
-  exportReportExcel,
-  exportReportPdfFile,
-  printReportSpreadsheet,
-} from "../utils/reportExports";
-import { formatCurrency } from "../utils/formatters";
+import { authJsonRequest, extractCollection } from "../services/api";
+import { formatDate } from "../utils/formatters";
 
+const PERIOD_OPTIONS = [
+  { value: "dia", label: "Dia" },
+  { value: "semana", label: "Semana" },
+  { value: "mes", label: "Mês" },
+];
 
-function getCurrentMonthValue() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${now.getFullYear()}-${month}`;
+function getTipoLabel(tipo) {
+  return tipo === "entrada" ? "Entrada" : "Saída";
 }
 
-
-function parseMonthValue(value) {
-  const [year, month] = String(value || "").split("-").map(Number);
-  return {
-    year: Number.isNaN(year) ? new Date().getFullYear() : year,
-    month: Number.isNaN(month) ? new Date().getMonth() + 1 : month,
-  };
+function getBadgeClass(tipo) {
+  return tipo === "entrada" ? "badge-success" : "badge-danger";
 }
 
-function getStatusLabel(status) {
-  if (status === "urgente") {
-    return "Urgente";
-  }
-
-  if (status === "atencao") {
-    return "Atenção";
-  }
-
-  return status || "-";
+function buildMovimentacaoMeta(movimentacao) {
+  return [movimentacao.responsavel_username || "Sistema", movimentacao.fornecedor_nome]
+    .filter(Boolean)
+    .join(" | ");
 }
-
-
-async function fetchRelatorios({ mesReferencia, diasBase }) {
-  const { year, month } = parseMonthValue(mesReferencia);
-
-  const [mensalData, reposicaoData] = await Promise.all([
-    authJsonRequest(
-      `/relatorios/mensal/?ano=${year}&mes=${month}`,
-      {},
-      "Erro ao carregar o relatório mensal.",
-    ),
-    authJsonRequest(
-      `/relatorios/reposicao/?dias_base=${diasBase}`,
-      {},
-      "Erro ao carregar a sugestão de reposição.",
-    ),
-  ]);
-
-  return {
-    mensalData,
-    reposicaoData,
-  };
-}
-
 
 export default function RelatoriosPage() {
-  const { config } = useSystemConfig();
-  const [mesReferencia, setMesReferencia] = useState(getCurrentMonthValue());
-  const [diasBase, setDiasBase] = useState("30");
-  const [relatorioMensal, setRelatorioMensal] = useState(null);
-  const [relatorioReposicao, setRelatorioReposicao] = useState(null);
+  const [periodo, setPeriodo] = useState("mes");
+  const [responsavelFiltro, setResponsavelFiltro] = useState("");
+  const [relatorio, setRelatorio] = useState(null);
+  const [movimentacoes, setMovimentacoes] = useState([]);
   const [carregando, setCarregando] = useState(false);
-  const [exportando, setExportando] = useState("");
   const [erro, setErro] = useState("");
 
-  async function carregarRelatorios() {
+  async function carregarRelatorios(periodoSelecionado = periodo) {
     setErro("");
     setCarregando(true);
 
     try {
-      const { mensalData, reposicaoData } = await fetchRelatorios({
-        mesReferencia,
-        diasBase,
-      });
+      const [relatorioData, movimentacoesData] = await Promise.all([
+        authJsonRequest(
+          `/relatorios/vendas/?periodo=${periodoSelecionado}`,
+          {},
+          "Erro ao carregar o relatório de vendas.",
+        ),
+        authJsonRequest(
+          `/movimentacoes/?periodo=${periodoSelecionado}`,
+          {},
+          "Erro ao carregar as movimentações do período.",
+        ),
+      ]);
 
-      setRelatorioMensal(mensalData);
-      setRelatorioReposicao(reposicaoData);
+      setRelatorio(relatorioData);
+      setMovimentacoes(extractCollection(movimentacoesData));
     } catch (error) {
       setErro(error.message || "Erro ao carregar relatórios.");
       toast.error(error.message || "Erro ao carregar relatórios.");
@@ -98,152 +65,62 @@ export default function RelatoriosPage() {
   }
 
   useEffect(() => {
-    async function carregarInicial() {
-      setErro("");
-      setCarregando(true);
-
-      try {
-        const { mensalData, reposicaoData } = await fetchRelatorios({
-          mesReferencia: getCurrentMonthValue(),
-          diasBase: "30",
-        });
-
-        setRelatorioMensal(mensalData);
-        setRelatorioReposicao(reposicaoData);
-      } catch (error) {
-        setErro(error.message || "Erro ao carregar relatórios.");
-        toast.error(error.message || "Erro ao carregar relatórios.");
-      } finally {
-        setCarregando(false);
-      }
-    }
-
-    carregarInicial();
+    carregarRelatorios("mes");
   }, []);
 
-  const diasComMovimento = useMemo(() => {
-    return (relatorioMensal?.movimentacoes_por_dia || []).filter(
-      (dia) => dia.entradas || dia.saidas,
+  const responsaveis = useMemo(() => {
+    return [...new Set(
+      movimentacoes
+        .map((movimentacao) => movimentacao.responsavel_username)
+        .filter(Boolean),
+    )].sort((first, second) => first.localeCompare(second, "pt-BR"));
+  }, [movimentacoes]);
+
+  const movimentacoesFiltradas = useMemo(() => {
+    if (!responsavelFiltro) {
+      return movimentacoes;
+    }
+
+    return movimentacoes.filter(
+      (movimentacao) => movimentacao.responsavel_username === responsavelFiltro,
     );
-  }, [relatorioMensal]);
-
-  const modeloExportacao = useMemo(() => {
-    if (!relatorioMensal || !relatorioReposicao) {
-      return null;
-    }
-
-    return createReportExportModel({
-      empresaNome: config?.nome_empresa,
-      empresaLogoUrl: config?.logo_url,
-      relatorioMensal,
-      relatorioReposicao,
-      diasBase,
-    });
-  }, [config?.logo_url, config?.nome_empresa, diasBase, relatorioMensal, relatorioReposicao]);
-
-  async function handleExportPdf() {
-    if (!modeloExportacao) {
-      return;
-    }
-
-    setExportando("pdf");
-
-    try {
-      await exportReportPdfFile(modeloExportacao);
-      toast.success("Relatório em PDF gerado com sucesso.");
-    } catch (error) {
-      toast.error(error.message || "Não foi possível exportar o relatório em PDF.");
-    } finally {
-      setExportando("");
-    }
-  }
-
-  async function handleExportExcel() {
-    if (!modeloExportacao) {
-      return;
-    }
-
-    setExportando("excel");
-
-    try {
-      await exportReportExcel(modeloExportacao);
-      toast.success("Relatório em Excel exportado com sucesso.");
-    } catch (error) {
-      toast.error(error.message || "Não foi possível exportar o relatório em Excel.");
-    } finally {
-      setExportando("");
-    }
-  }
-
-  function handlePrintSpreadsheet() {
-    if (!modeloExportacao) {
-      return;
-    }
-
-    try {
-      printReportSpreadsheet(modeloExportacao);
-    } catch (error) {
-      toast.error(error.message || "Não foi possível abrir a impressão do relatório.");
-    }
-  }
+  }, [movimentacoes, responsavelFiltro]);
 
   return (
     <Layout title="Relatórios">
       <div className="form-shell form-shell--wide reports-page">
-        <PageHeader
-          title="Relatórios"
-          action={(
-            <div className="table-actions reports-page__actions">
-              <button
-                type="button"
-                className="button-secondary reports-page__print-button"
-                onClick={handlePrintSpreadsheet}
-                disabled={!modeloExportacao || carregando || Boolean(exportando)}
-              >
-                Imprimir planilha
-              </button>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={handleExportExcel}
-                disabled={!modeloExportacao || carregando || Boolean(exportando)}
-              >
-                {exportando === "excel" ? "Gerando Excel..." : "Exportar Excel"}
-              </button>
-              <button
-                type="button"
-                className="button-primary"
-                onClick={handleExportPdf}
-                disabled={!modeloExportacao || carregando || Boolean(exportando)}
-              >
-                {exportando === "pdf" ? "Gerando PDF..." : "Exportar PDF"}
-              </button>
-            </div>
-          )}
-        />
+        <PageHeader title="Relatórios" />
 
         {erro ? <div className="alert-error">{erro}</div> : null}
 
-        <div className="page-card section-card reports-page__filters" style={{ marginBottom: "20px" }}>
+        <div className="page-card section-card" style={{ marginBottom: "20px" }}>
           <div className="filters-grid">
             <div>
-              <label className="form-label">Mês</label>
-              <input
-                type="month"
-                value={mesReferencia}
-                onChange={(event) => setMesReferencia(event.target.value)}
-              />
-            </div>
-            <div>
-              <label className="form-label">Base do pedido</label>
+              <label className="form-label">Período</label>
               <select
-                value={diasBase}
-                onChange={(event) => setDiasBase(event.target.value)}
+                value={periodo}
+                onChange={(event) => setPeriodo(event.target.value)}
               >
-                <option value="15">15 dias</option>
-                <option value="30">30 dias</option>
-                <option value="60">60 dias</option>
-                <option value="90">90 dias</option>
+                {PERIOD_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="form-label">Responsável</label>
+              <select
+                value={responsavelFiltro}
+                onChange={(event) => setResponsavelFiltro(event.target.value)}
+              >
+                <option value="">Todos</option>
+                {responsaveis.map((responsavel) => (
+                  <option key={responsavel} value={responsavel}>
+                    {responsavel}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -252,39 +129,27 @@ export default function RelatoriosPage() {
             <button
               type="button"
               className="button-primary"
-              onClick={carregarRelatorios}
+              onClick={() => carregarRelatorios(periodo)}
               disabled={carregando}
             >
-              {carregando ? "Atualizando..." : "Atualizar"}
+              {carregando ? "Carregando..." : "Atualizar"}
             </button>
           </div>
         </div>
 
-        {relatorioMensal ? (
+        {relatorio ? (
           <div className="summary-grid">
             <SummaryCard
-              title="Entradas"
-              value={relatorioMensal.resumo.entradas_unidades}
+              title="Vendas"
+              value={relatorio.resumo.vendas_registradas}
               tone="blue"
-              caption={relatorioMensal.referencia.label}
+              caption={relatorio.periodo.label}
             />
             <SummaryCard
-              title="Saídas"
-              value={relatorioMensal.resumo.saidas_unidades}
-              tone="orange"
-              caption={`${relatorioMensal.resumo.movimentacoes} movimentos`}
-            />
-            <SummaryCard
-              title="Pedidos"
-              value={relatorioMensal.resumo.pedidos_finalizados}
+              title="Itens"
+              value={relatorio.resumo.itens_vendidos}
               tone="green"
-              caption="Finalizados no mês"
-            />
-            <SummaryCard
-              title="Faturamento"
-              value={formatCurrency(relatorioMensal.resumo.faturamento_estimado)}
-              tone="blue"
-              caption="Estimado"
+              caption="Vendidos"
             />
           </div>
         ) : null}
@@ -292,57 +157,25 @@ export default function RelatoriosPage() {
         <div className="dashboard-grid--wide">
           <div className="page-card table-card">
             <div className="section-header-inline">
-              <div>
-                <h3 className="section-title">Movimento do mês</h3>
-                <p className="table-inline-note">
-                  {relatorioMensal?.referencia?.label || "-"}
-                </p>
-              </div>
+              <h3 className="section-title">Mais vendidos</h3>
             </div>
 
-            {diasComMovimento.length === 0 ? (
-              <EmptyState>Sem movimentos no período.</EmptyState>
-            ) : (
-              <div className="table-wrapper">
-                <table className="table-modern">
-                  <thead>
-                    <tr>
-                      <th>Dia</th>
-                      <th>Entradas</th>
-                      <th>Saídas</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {diasComMovimento.map((dia) => (
-                      <tr key={dia.data}>
-                        <td>{dia.label}</td>
-                        <td>{dia.entradas}</td>
-                        <td>{dia.saidas}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          <div className="page-card table-card">
-            <h3 className="section-title">Mais saídas</h3>
-            {relatorioMensal?.top_saidas?.length ? (
+            {relatorio?.itens?.length ? (
               <div className="table-wrapper">
                 <table className="table-modern">
                   <thead>
                     <tr>
                       <th>Produto</th>
-                      <th>SKU</th>
                       <th>Qtd</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {relatorioMensal.top_saidas.map((item) => (
+                    {relatorio.itens.map((item) => (
                       <tr key={item.produto_id}>
-                        <td>{item.nome}</td>
-                        <td>{item.sku}</td>
+                        <td>
+                          <div className="table-cell-primary">{item.nome}</div>
+                          <div className="table-cell-meta">{item.sku}</div>
+                        </td>
                         <td>{item.quantidade}</td>
                       </tr>
                     ))}
@@ -350,67 +183,53 @@ export default function RelatoriosPage() {
                 </table>
               </div>
             ) : (
-              <EmptyState>Sem saídas no período.</EmptyState>
+              <EmptyState>Nenhuma venda no período.</EmptyState>
             )}
           </div>
-        </div>
 
-        <div className="page-card table-card">
-          <div className="section-header-inline">
-            <div>
-              <h3 className="section-title">Pedido sugerido</h3>
-                <p className="table-inline-note">Base dos últimos {diasBase} dias</p>
+          <div className="page-card table-card">
+            <div className="section-header-inline">
+              <h3 className="section-title">Movimentações</h3>
             </div>
-            <strong>
-              {formatCurrency(relatorioReposicao?.resumo?.valor_total_estimado || 0)}
-            </strong>
-          </div>
 
-          {relatorioReposicao?.itens?.length ? (
-            <div className="table-wrapper">
-              <table className="table-modern">
-                <thead>
-                  <tr>
-                    <th>Produto</th>
-                    <th>Fornecedor</th>
-                    <th>Atual</th>
-                    <th>Mínimo</th>
-                    <th>Saída</th>
-                    <th>Pedir</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {relatorioReposicao.itens.map((item) => (
-                    <tr key={item.produto_id}>
-                      <td>
-                        <strong>{item.nome}</strong>
-                        <div className="table-inline-note">{item.sku}</div>
-                      </td>
-                      <td>{item.fornecedor_nome || "-"}</td>
-                      <td>{item.estoque_atual}</td>
-                      <td>{item.estoque_minimo}</td>
-                      <td>{item.saida_recente}</td>
-                      <td>{item.sugestao_pedido}</td>
-                      <td>
-                        <span
-                          className={`badge ${
-                            item.status === "urgente"
-                              ? "badge-danger"
-                              : "badge-warning"
-                          }`}
-                        >
-                          {getStatusLabel(item.status)}
-                        </span>
-                      </td>
+            {movimentacoesFiltradas.length ? (
+              <div className="table-wrapper">
+                <table className="table-modern">
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th>Tipo</th>
+                      <th>Qtd</th>
+                      <th>Data</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyState>Nenhum item precisa de reposição no momento.</EmptyState>
-          )}
+                  </thead>
+                  <tbody>
+                    {movimentacoesFiltradas.map((movimentacao) => (
+                      <tr key={movimentacao.id}>
+                        <td>
+                          <div className="table-cell-primary">
+                            {movimentacao.produto_nome}
+                          </div>
+                          <div className="table-cell-meta">
+                            {buildMovimentacaoMeta(movimentacao)}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge ${getBadgeClass(movimentacao.tipo)}`}>
+                            {getTipoLabel(movimentacao.tipo)}
+                          </span>
+                        </td>
+                        <td>{movimentacao.quantidade}</td>
+                        <td>{formatDate(movimentacao.data_referencia || movimentacao.data)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState>Nenhuma movimentação encontrada.</EmptyState>
+            )}
+          </div>
         </div>
       </div>
     </Layout>

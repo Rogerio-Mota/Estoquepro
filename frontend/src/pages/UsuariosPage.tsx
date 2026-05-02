@@ -24,7 +24,6 @@ function getTipoLabel(tipo) {
   return tipo || "-";
 }
 
-
 export default function UsuariosPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -81,7 +80,11 @@ export default function UsuariosPage() {
     }
 
     try {
-      await authJsonRequest(`/usuarios/${id}/`, { method: "DELETE" }, "Erro ao excluir usuário.");
+      await authJsonRequest(
+        `/usuarios/${id}/`,
+        { method: "DELETE" },
+        "Erro ao excluir usuário.",
+      );
       setUsuarios((prevState) => prevState.filter((usuario) => usuario.id !== id));
       toast.success("Usuário excluído com sucesso.");
     } catch (error) {
@@ -108,15 +111,14 @@ export default function UsuariosPage() {
   return (
     <Layout title="Usuários">
       <PageHeader
-        title="Gestão de usuários"
-        description="Controle os perfis de acesso que podem operar o sistema."
+        title="Usuários"
         action={
           <button
             type="button"
             className="button-primary"
             onClick={() => navigate("/novo-usuario")}
           >
-            Novo Usuário
+            Novo usuário
           </button>
         }
       />
@@ -124,7 +126,7 @@ export default function UsuariosPage() {
       <div className="page-card section-card">
         <input
           type="text"
-          placeholder="Buscar por usuário ou perfil"
+          placeholder="Buscar usuário"
           value={busca}
           onChange={(event) => atualizarBusca(event.target.value)}
         />
@@ -171,13 +173,17 @@ export default function UsuariosPage() {
                         >
                           Editar
                         </button>
-                        <button
-                          type="button"
-                          className="button-danger"
-                          onClick={() => excluirUsuario(usuario.id)}
-                        >
-                          Excluir
-                        </button>
+                        {usuario.tipo === "admin" ? (
+                          <span className="table-inline-note">Principal</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="button-danger"
+                            onClick={() => excluirUsuario(usuario.id)}
+                          >
+                            Excluir
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

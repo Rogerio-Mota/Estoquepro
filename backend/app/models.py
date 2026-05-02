@@ -1,7 +1,7 @@
 ﻿from django.contrib.auth.models import User
-from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 SUBCATEGORIAS_POR_CATEGORIA = {
     "roupa": {"camisa", "calca", "bermuda"},
@@ -40,10 +40,8 @@ class PerfilUsuario(models.Model):
 
 class Fornecedor(models.Model):
     nome = models.CharField(max_length=100)
-    documento = models.CharField(max_length=18, blank=True, null=True)
-    contato = models.CharField(max_length=100, blank=True, null=True)
-    telefone = models.CharField(max_length=20, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
+    contato = models.CharField(max_length=100, blank=True, default="")
+    cidade = models.CharField(max_length=100, blank=True, default="")
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -53,16 +51,6 @@ class Fornecedor(models.Model):
 
     def __str__(self):
         return self.nome
-
-    def clean(self):
-        super().clean()
-
-        if self.documento:
-            digits = "".join(char for char in self.documento if char.isdigit())
-            if len(digits) not in {11, 14}:
-                raise ValidationError(
-                    {"documento": "Informe um CPF ou CNPJ valido para o fornecedor."}
-                )
 
 
 class Produto(models.Model):
@@ -88,11 +76,6 @@ class Produto(models.Model):
     subcategoria = models.CharField(max_length=20, choices=Subcategoria.choices)
     marca = models.CharField(max_length=100)
     sku = models.CharField(max_length=50, unique=True)
-    codigo_barras = models.CharField(max_length=20, blank=True, null=True)
-    ncm = models.CharField(max_length=8, blank=True, null=True)
-    cest = models.CharField(max_length=7, blank=True, null=True)
-    cfop = models.CharField(max_length=4, blank=True, null=True)
-    unidade_comercial = models.CharField(max_length=10, blank=True, null=True)
     fornecedor = models.ForeignKey(
         Fornecedor,
         on_delete=models.SET_NULL,
@@ -131,11 +114,6 @@ class Produto(models.Model):
         self.nome = " ".join(str(self.nome or "").split())
         self.marca = " ".join(str(self.marca or "").split())
         self.sku = str(self.sku or "").strip().upper()
-        self.codigo_barras = str(self.codigo_barras or "").strip() or None
-        self.ncm = str(self.ncm or "").strip() or None
-        self.cest = str(self.cest or "").strip() or None
-        self.cfop = str(self.cfop or "").strip() or None
-        self.unidade_comercial = str(self.unidade_comercial or "").strip().upper() or None
 
         subcategorias_validas = SUBCATEGORIAS_POR_CATEGORIA.get(self.categoria, set())
         if self.subcategoria and self.subcategoria not in subcategorias_validas:
@@ -197,7 +175,6 @@ class Produto(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
-
 
 class Variacao(models.Model):
     class Tamanho(models.TextChoices):
@@ -339,18 +316,14 @@ class Variacao(models.Model):
 
 class PedidoVenda(models.Model):
     class Status(models.TextChoices):
-        RASCUNHO = "rascunho", "Rascunho"
         FINALIZADO = "finalizado", "Finalizado"
-        CANCELADO = "cancelado", "Cancelado"
 
     cliente_nome = models.CharField(max_length=120)
-    cliente_documento = models.CharField(max_length=18, blank=True, null=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.RASCUNHO,
+        default=Status.FINALIZADO,
     )
-    observacao = models.TextField(blank=True, null=True)
     criado_por = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -363,29 +336,19 @@ class PedidoVenda(models.Model):
 
     class Meta:
         ordering = ("-criado_em", "-id")
-        verbose_name = "pedido de venda"
-        verbose_name_plural = "pedidos de venda"
+        verbose_name = "venda"
+        verbose_name_plural = "vendas"
 
     def __str__(self):
         return self.codigo
 
     @property
     def codigo(self):
-        return f"PED-{self.pk:05d}" if self.pk else "PED-NOVO"
+        return f"VEN-{self.pk:05d}" if self.pk else "VEN-NOVA"
 
     @property
     def valor_total(self):
         return sum(item.subtotal for item in self.itens.all())
-
-    def clean(self):
-        super().clean()
-
-        if self.cliente_documento:
-            digits = "".join(char for char in self.cliente_documento if char.isdigit())
-            if len(digits) not in {11, 14}:
-                raise ValidationError(
-                    {"cliente_documento": "Informe um CPF ou CNPJ valido para o cliente."}
-                )
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -405,6 +368,13 @@ class Movimentacao(models.Model):
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
     quantidade = models.PositiveIntegerField()
     observacao = models.TextField(blank=True, null=True)
+    fornecedor = models.ForeignKey(
+        Fornecedor,
+        on_delete=models.SET_NULL,
+        related_name="movimentacoes",
+        blank=True,
+        null=True,
+    )
     responsavel = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -412,6 +382,7 @@ class Movimentacao(models.Model):
         blank=True,
         null=True,
     )
+    data_referencia = models.DateField(default=timezone.localdate)
     data = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -455,13 +426,6 @@ class PedidoVendaItem(models.Model):
         blank=True,
         null=True,
     )
-    movimentacao_estorno = models.ForeignKey(
-        Movimentacao,
-        on_delete=models.SET_NULL,
-        related_name="itens_pedido_venda_estorno",
-        blank=True,
-        null=True,
-    )
 
     class Meta:
         ordering = ("id",)
@@ -490,136 +454,5 @@ class PedidoVendaItem(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        self.full_clean()
-        return super().save(*args, **kwargs)
-
-
-class ImportacaoNotaFiscal(models.Model):
-    chave_acesso = models.CharField(
-        max_length=44,
-        unique=True,
-        blank=True,
-        null=True,
-    )
-    numero = models.CharField(max_length=20, blank=True)
-    serie = models.CharField(max_length=10, blank=True)
-    fornecedor_nome = models.CharField(max_length=150, blank=True)
-    fornecedor_documento = models.CharField(max_length=18, blank=True)
-    data_emissao = models.DateTimeField(blank=True, null=True)
-    arquivo_nome = models.CharField(max_length=255, blank=True)
-    importado_por = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        related_name="importacoes_nota_fiscal",
-        blank=True,
-        null=True,
-    )
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ("-criado_em", "-id")
-        verbose_name = "importacao de nota fiscal"
-        verbose_name_plural = "importacoes de nota fiscal"
-
-    def __str__(self):
-        identificador = self.chave_acesso or f"{self.numero}/{self.serie}"
-        return f"NF-e {identificador}"
-
-
-class ImportacaoNotaFiscalItem(models.Model):
-    importacao = models.ForeignKey(
-        ImportacaoNotaFiscal,
-        on_delete=models.CASCADE,
-        related_name="itens",
-    )
-    indice = models.PositiveIntegerField()
-    codigo_produto = models.CharField(max_length=60, blank=True)
-    descricao_produto = models.CharField(max_length=255)
-    quantidade = models.DecimalField(max_digits=12, decimal_places=4)
-    valor_unitario = models.DecimalField(
-        max_digits=12,
-        decimal_places=4,
-        blank=True,
-        null=True,
-    )
-    variacao = models.ForeignKey(
-        Variacao,
-        on_delete=models.SET_NULL,
-        related_name="itens_importacao_nota_fiscal",
-        blank=True,
-        null=True,
-    )
-    movimentacao = models.ForeignKey(
-        Movimentacao,
-        on_delete=models.SET_NULL,
-        related_name="itens_importacao_nota_fiscal",
-        blank=True,
-        null=True,
-    )
-
-    class Meta:
-        ordering = ("indice", "id")
-        unique_together = ("importacao", "indice")
-        verbose_name = "item de importacao de nota fiscal"
-        verbose_name_plural = "itens de importacao de nota fiscal"
-
-    def __str__(self):
-        return f"Item {self.indice} - {self.descricao_produto}"
-
-
-class ConfiguracaoSistema(models.Model):
-    nome_empresa = models.CharField(max_length=120, default="EstoquePro")
-    descricao_empresa = models.CharField(
-        max_length=160,
-        default="Gestao inteligente de estoque",
-    )
-    logo = models.FileField(
-        upload_to="branding/logos/",
-        blank=True,
-        null=True,
-        validators=[
-            FileExtensionValidator(
-                allowed_extensions=["png", "jpg", "jpeg", "webp", "svg"]
-            )
-        ],
-    )
-    cor_primaria = models.CharField(max_length=7, default="#1768AC")
-    cor_secundaria = models.CharField(max_length=7, default="#0F4C81")
-    cor_acento = models.CharField(max_length=7, default="#F97316")
-    atualizado_por = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        related_name="configuracoes_sistema_atualizadas",
-        blank=True,
-        null=True,
-    )
-    atualizado_em = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "configuracao do sistema"
-        verbose_name_plural = "configuracoes do sistema"
-
-    def __str__(self):
-        return self.nome_empresa
-
-    def clean(self):
-        super().clean()
-
-        for field_name in ("cor_primaria", "cor_secundaria", "cor_acento"):
-            value = (getattr(self, field_name) or "").strip()
-            if len(value) != 7 or not value.startswith("#"):
-                raise ValidationError(
-                    {field_name: "Informe uma cor hexadecimal no formato #RRGGBB."}
-                )
-
-            try:
-                int(value[1:], 16)
-            except ValueError as error:
-                raise ValidationError(
-                    {field_name: "Informe uma cor hexadecimal vÃ¡lida."}
-                ) from error
-
-    def save(self, *args, **kwargs):
-        self.pk = 1
         self.full_clean()
         return super().save(*args, **kwargs)

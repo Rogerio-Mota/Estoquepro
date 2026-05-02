@@ -6,19 +6,6 @@ import Layout from "../components/Layout";
 import SummaryCard from "../components/SummaryCard";
 import useAuth from "../hooks/useAuth";
 import { authJsonRequest, extractCollection } from "../services/api";
-import { formatCurrency } from "../utils/formatters";
-
-const dayLabelFormatter = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-});
-
-function buildDayKey(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 export default function DashboardHome() {
   const { user } = useAuth();
@@ -36,7 +23,7 @@ export default function DashboardHome() {
           authJsonRequest(
             "/produtos/estoque-baixo/",
             {},
-            "Erro ao carregar o alerta de estoque baixo.",
+            "Erro ao carregar o estoque baixo.",
           ),
         ]);
 
@@ -56,7 +43,6 @@ export default function DashboardHome() {
       .sort((primeira, segunda) => {
         const primeiraData = new Date(primeira.data).getTime();
         const segundaData = new Date(segunda.data).getTime();
-
         return segundaData - primeiraData;
       })
       .slice(0, 5);
@@ -69,113 +55,40 @@ export default function DashboardHome() {
     );
   }, [produtos]);
 
-  const valorEstoque = useMemo(() => {
-    return produtos.reduce((acumulador, produto) => {
-      return (
-        acumulador +
-        Number(produto.estoque_total || 0) * Number(produto.preco_custo || 0)
-      );
+  const totalMovimentadoPeriodo = useMemo(() => {
+    const limite = new Date();
+    limite.setHours(0, 0, 0, 0);
+    limite.setDate(limite.getDate() - 6);
+
+    return movimentacoes.reduce((acumulador, movimentacao) => {
+      const dataMovimentacao = new Date(movimentacao.data);
+
+      if (Number.isNaN(dataMovimentacao.getTime()) || dataMovimentacao < limite) {
+        return acumulador;
+      }
+
+      return acumulador + Number(movimentacao.quantidade || 0);
     }, 0);
-  }, [produtos]);
-
-  const taxaEstoqueCritico = produtos.length
-    ? Math.round((estoqueBaixo.length / produtos.length) * 100)
-    : 0;
-  const possuiAlertaEstoque = estoqueBaixo.length > 0;
-  const produtoMaisCritico = estoqueBaixo[0] || null;
-
-  const movimentacoesPorDia = useMemo(() => {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    const dias = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(hoje);
-      date.setDate(hoje.getDate() - (6 - index));
-
-      return {
-        key: buildDayKey(date),
-        label: dayLabelFormatter.format(date),
-        entradas: 0,
-        saidas: 0,
-      };
-    });
-
-    const mapaDias = new Map(dias.map((dia) => [dia.key, dia]));
-
-    movimentacoes.forEach((movimentacao) => {
-      const date = new Date(movimentacao.data);
-
-      if (Number.isNaN(date.getTime())) {
-        return;
-      }
-
-      date.setHours(0, 0, 0, 0);
-      const key = buildDayKey(date);
-      const dia = mapaDias.get(key);
-
-      if (!dia) {
-        return;
-      }
-
-      const quantidade = Number(movimentacao.quantidade || 0);
-
-      if (movimentacao.tipo === "entrada") {
-        dia.entradas += quantidade;
-      }
-
-      if (movimentacao.tipo === "saida") {
-        dia.saidas += quantidade;
-      }
-    });
-
-    return dias;
   }, [movimentacoes]);
 
-  const totalMovimentadoPeriodo = useMemo(() => {
-    return movimentacoesPorDia.reduce(
-      (acumulador, dia) => acumulador + dia.entradas + dia.saidas,
-      0,
-    );
-  }, [movimentacoesPorDia]);
-
-  const diasComMovimento = useMemo(() => {
-    return movimentacoesPorDia.filter((dia) => dia.entradas + dia.saidas > 0).length;
-  }, [movimentacoesPorDia]);
-
-  const ultimaAtividade = useMemo(() => {
-    return [...movimentacoesPorDia]
-      .reverse()
-      .find((dia) => dia.entradas + dia.saidas > 0) || null;
-  }, [movimentacoesPorDia]);
-
-  const tituloResumo = possuiAlertaEstoque
-    ? "Alguns itens precisam de reposição."
-    : "A operação está organizada.";
-  const descricaoResumo = possuiAlertaEstoque
-    ? `${estoqueBaixo.length} produtos estão abaixo do mínimo. Priorize a reposição dos itens críticos para evitar ruptura.`
-    : "Não há produtos em situação crítica no momento. O estoque segue estável para a operação atual.";
-  const descricaoSemana =
-    totalMovimentadoPeriodo > 0
-      ? `${totalMovimentadoPeriodo} unidades movimentadas nos últimos 7 dias, com atividade em ${diasComMovimento} dias.`
-      : "Ainda não houve movimentações registradas nos últimos 7 dias.";
   const rotaProduto = user?.tipo === "admin" ? "/novo-produto" : "/estoque-baixo";
-  const rotuloProduto = user?.tipo === "admin" ? "Novo produto" : "Ver alertas";
+  const rotuloProduto = user?.tipo === "admin" ? "Novo produto" : "Estoque baixo";
 
   return (
-    <Layout title="Painel" showTopbar={false}>
+    <Layout title="Painel">
       <div className="dashboard-home">
         <div className="summary-grid dashboard-home__summary">
           <SummaryCard
             title="Produtos"
             value={produtos.length}
             tone="blue"
-            caption={`${unidadesEmEstoque} unidades em estoque`}
+            caption={`${unidadesEmEstoque} em estoque`}
           />
           <SummaryCard
             title="Estoque baixo"
             value={estoqueBaixo.length}
-            tone={possuiAlertaEstoque ? "alert" : "orange"}
-            caption={possuiAlertaEstoque ? `${taxaEstoqueCritico}% da base em alerta` : "Sem alerta"}
+            tone={estoqueBaixo.length > 0 ? "alert" : "orange"}
+            caption={estoqueBaixo.length > 0 ? "Precisa repor" : "Tudo certo"}
           />
           <SummaryCard
             title="Movimentado"
@@ -183,126 +96,62 @@ export default function DashboardHome() {
             tone="green"
             caption="Últimos 7 dias"
           />
-          <SummaryCard
-            title="Valor em estoque"
-            value={formatCurrency(valorEstoque)}
-            tone="blue"
-            caption="Estimativa pelo custo"
-          />
         </div>
 
-        <section
-          className={`page-card section-card dashboard-home__overview ${
-            possuiAlertaEstoque ? "dashboard-home__overview--alert" : ""
-          }`}
-        >
-          <div className="dashboard-home__overview-main">
-            <span className="dashboard-home__eyebrow">Resumo da operação</span>
-            <h2 className="dashboard-home__headline">{tituloResumo}</h2>
-            <p className="dashboard-home__description">
-              {descricaoResumo} {descricaoSemana}
-            </p>
-
-            <div className="dashboard-home__mini-grid">
-              <article className="dashboard-home__mini-card">
-                <span>Valor estimado</span>
-                <strong>{formatCurrency(valorEstoque)}</strong>
-                <small>Baseado no custo cadastrado</small>
-              </article>
-
-              <article className="dashboard-home__mini-card">
-                <span>Última atividade</span>
-                <strong>{ultimaAtividade ? ultimaAtividade.label : "Sem registro"}</strong>
-                <small>
-                  {ultimaAtividade
-                    ? `${ultimaAtividade.entradas + ultimaAtividade.saidas} unidades no dia`
-                    : "Sem movimentação recente"}
-                </small>
-              </article>
-
-              <article
-                className={`dashboard-home__mini-card ${
-                  possuiAlertaEstoque ? "dashboard-home__mini-card--alert" : ""
-                }`}
+        <section className="page-card section-card">
+          <div className="section-header-inline">
+            <h3 className="section-title">Atalhos</h3>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => navigate("/nova-movimentacao")}
               >
-                <span>Reposição crítica</span>
-                <strong>{produtoMaisCritico ? produtoMaisCritico.nome : "Sem pendências"}</strong>
-                <small>
-                  {produtoMaisCritico
-                    ? `${produtoMaisCritico.estoque_total}/${produtoMaisCritico.estoque_minimo} em estoque`
-                    : "Todos os itens acima do mínimo"}
-                </small>
-              </article>
+                Nova movimentação
+              </button>
+              <button
+                type="button"
+                className="button-primary"
+                onClick={() => navigate(rotaProduto)}
+              >
+                {rotuloProduto}
+              </button>
             </div>
-          </div>
-
-          <div className="dashboard-home__actions">
-            <button
-              type="button"
-              className="button-primary dashboard-home__action-button"
-              onClick={() => navigate("/nova-movimentacao")}
-            >
-              Registrar movimentação
-            </button>
-            <button
-              type="button"
-              className="button-secondary dashboard-home__action-button"
-              onClick={() => navigate("/importar-nota-fiscal")}
-            >
-              Importar NF-e
-            </button>
-            <button
-              type="button"
-              className="button-secondary dashboard-home__action-button"
-              onClick={() => navigate(rotaProduto)}
-            >
-              {rotuloProduto}
-            </button>
           </div>
         </section>
 
         <div className="dashboard-home__content">
-          <section
-            className={`page-card table-card dashboard-home__table-card ${
-              possuiAlertaEstoque ? "dashboard-home__table-card--alert" : ""
-            }`}
-          >
+          <section className="page-card table-card dashboard-home__table-card">
             <div className="section-header-inline">
-              <div>
-                <h3 className="section-title">Estoque baixo</h3>
-                <p className="table-inline-note">
-                  Produtos que pedem reposição com mais urgência.
-                </p>
-              </div>
+              <h3 className="section-title">Estoque baixo</h3>
               <button
                 type="button"
                 className="button-linkish"
                 onClick={() => navigate("/estoque-baixo")}
               >
-                Ver lista completa
+                Ver todos
               </button>
             </div>
 
             {estoqueBaixo.length === 0 ? (
-              <p className="empty-state dashboard-home__empty">
-                Nenhum produto com estoque baixo.
-              </p>
+              <p className="empty-state dashboard-home__empty">Nenhum alerta.</p>
             ) : (
               <div className="table-wrapper">
                 <table className="table-modern">
                   <thead>
                     <tr>
                       <th>Produto</th>
-                      <th>Marca</th>
                       <th>Atual</th>
-                      <th>Mínimo</th>
+                      <th>Min</th>
                     </tr>
                   </thead>
                   <tbody>
                     {estoqueBaixo.slice(0, 5).map((produto) => (
                       <tr key={produto.id}>
-                        <td>{produto.nome}</td>
-                        <td>{produto.marca}</td>
+                        <td>
+                          <div className="table-cell-primary">{produto.nome}</div>
+                          <div className="table-cell-meta">{produto.marca || "-"}</div>
+                        </td>
                         <td>{produto.estoque_total}</td>
                         <td>{produto.estoque_minimo}</td>
                       </tr>
@@ -315,12 +164,7 @@ export default function DashboardHome() {
 
           <section className="page-card table-card dashboard-home__table-card">
             <div className="section-header-inline">
-              <div>
-                <h3 className="section-title">Últimas movimentações</h3>
-                <p className="table-inline-note">
-                  Registros mais recentes da operação.
-                </p>
-              </div>
+              <h3 className="section-title">Últimas movimentações</h3>
               <button
                 type="button"
                 className="button-linkish"
@@ -331,9 +175,7 @@ export default function DashboardHome() {
             </div>
 
             {movimentacoesRecentes.length === 0 ? (
-              <p className="empty-state dashboard-home__empty">
-                Nenhuma movimentação registrada.
-              </p>
+              <p className="empty-state dashboard-home__empty">Nenhum registro.</p>
             ) : (
               <div className="table-wrapper">
                 <table className="table-modern">

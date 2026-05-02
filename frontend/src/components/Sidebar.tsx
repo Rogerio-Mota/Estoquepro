@@ -6,18 +6,15 @@ import useAuth from "../hooks/useAuth";
 import useSystemConfig from "../hooks/useSystemConfig";
 import { getBrandInitials } from "../utils/branding";
 
-
 type IconName =
   | "dashboard"
   | "orders"
   | "products"
   | "stock"
   | "movement"
-  | "invoice"
   | "suppliers"
   | "users"
   | "reports"
-  | "settings"
   | "more"
   | "chevron";
 
@@ -37,18 +34,16 @@ type SidebarProps = {
 
 const MAIN_MENU_ITEMS: MenuItem[] = [
   { to: "/", label: "Painel", icon: "dashboard", matchPaths: ["/"] },
-  { to: "/pedidos", label: "Pedidos", icon: "orders", matchPaths: ["/pedidos", "/novo-pedido", "/editar-pedido"] },
+  { to: "/pedidos", label: "Vendas", icon: "orders", matchPaths: ["/pedidos", "/novo-pedido"] },
   { to: "/produtos", label: "Produtos", icon: "products", matchPaths: ["/produtos", "/novo-produto", "/editar-produto"] },
-  { to: "/estoque-baixo", label: "Estoque", icon: "stock", matchPaths: ["/estoque-baixo"] },
-  { to: "/movimentacoes", label: "Movimentos", icon: "movement", matchPaths: ["/movimentacoes", "/nova-movimentacao"] },
+  { to: "/estoque-baixo", label: "Estoque baixo", icon: "stock", matchPaths: ["/estoque-baixo"] },
+  { to: "/movimentacoes", label: "Movimentações", icon: "movement", matchPaths: ["/movimentacoes", "/nova-movimentacao"] },
 ];
 
 const SECONDARY_MENU_ITEMS: MenuItem[] = [
-  { to: "/importar-nota-fiscal", label: "Importar NF-e", icon: "invoice", matchPaths: ["/importar-nota-fiscal"] },
   { to: "/relatorios", label: "Relatórios", icon: "reports", matchPaths: ["/relatorios"] },
   { to: "/fornecedores", label: "Fornecedores", icon: "suppliers", matchPaths: ["/fornecedores", "/novo-fornecedor", "/editar-fornecedor"] },
 ];
-
 
 function getRoleLabel(tipo?: string | null) {
   if (tipo === "admin") {
@@ -62,13 +57,11 @@ function getRoleLabel(tipo?: string | null) {
   return "Usuário";
 }
 
-
 function isItemActive(pathname: string, item: MenuItem) {
   return item.matchPaths.some((matchPath) => (
     pathname === matchPath || pathname.startsWith(`${matchPath}/`)
   ));
 }
-
 
 function MenuIcon({
   name,
@@ -135,15 +128,6 @@ function MenuIcon({
           <path d="m11.5 12.5-3 3 3 3" />
         </svg>
       );
-    case "invoice":
-      return (
-        <svg {...props}>
-          <path d="M8 4.5h6l4 4v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1Z" />
-          <path d="M14 4.5v4h4" />
-          <path d="M8.5 12h7" />
-          <path d="M8.5 15.5h7" />
-        </svg>
-      );
     case "suppliers":
       return (
         <svg {...props}>
@@ -171,13 +155,6 @@ function MenuIcon({
           <path d="M4 18.5h16" />
         </svg>
       );
-    case "settings":
-      return (
-        <svg {...props}>
-          <path d="M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z" />
-          <path d="M19 12a7.5 7.5 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7.8 7.8 0 0 0-1.7-1l-.3-2.6h-4l-.3 2.6a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.8 7.8 0 0 0 1.7 1l.3 2.6h4l.3-2.6a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z" />
-        </svg>
-      );
     case "more":
       return (
         <svg {...props}>
@@ -197,7 +174,6 @@ function MenuIcon({
   }
 }
 
-
 export default function Sidebar({
   aberto,
   isMobile,
@@ -213,7 +189,6 @@ export default function Sidebar({
     ? [
         ...SECONDARY_MENU_ITEMS,
         { to: "/usuarios", label: "Usuários", icon: "users", matchPaths: ["/usuarios", "/novo-usuario", "/editar-usuario"] },
-        { to: "/configuracoes", label: "Configurações", icon: "settings", matchPaths: ["/configuracoes"] },
       ]
     : SECONDARY_MENU_ITEMS;
   const brandInitials = getBrandInitials(config.nome_empresa);

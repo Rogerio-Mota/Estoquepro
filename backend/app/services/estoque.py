@@ -1,5 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from ..models import Movimentacao, Variacao
 
@@ -56,9 +57,17 @@ def criar_variacao_com_estoque_inicial(
 
     return variacao
 
-
 @transaction.atomic
-def registrar_movimentacao(*, variacao, tipo, quantidade, observacao="", usuario=None):
+def registrar_movimentacao(
+    *,
+    variacao,
+    tipo,
+    quantidade,
+    observacao="",
+    usuario=None,
+    fornecedor=None,
+    data_referencia=None,
+):
     variacao_id = variacao.pk if isinstance(variacao, Variacao) else variacao
     try:
         variacao_atual = (
@@ -96,7 +105,9 @@ def registrar_movimentacao(*, variacao, tipo, quantidade, observacao="", usuario
         tipo=tipo,
         quantidade=quantidade,
         observacao=(observacao or "").strip() or OBSERVACOES_PADRAO[tipo],
+        fornecedor=fornecedor,
         responsavel=usuario if getattr(usuario, "is_authenticated", False) else None,
+        data_referencia=data_referencia or timezone.localdate(),
     )
 
     return movimentacao, variacao_atual
