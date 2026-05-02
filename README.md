@@ -1,58 +1,33 @@
 # EstoquePro
 
-Sistema web de gestao de estoque com backend em Django REST Framework e frontend em React + Vite.
+Sistema web de controle de estoque e vendas com backend em Django REST Framework e frontend em React + Vite.
 
-O projeto foi estruturado para atender uma operacao de varejo com controle de produtos, variacoes, movimentacoes, fornecedores, usuarios, importacao de NF-e e personalizacao visual da empresa.
+O estado atual do projeto esta focado em catalogo, estoque, vendas, relatorios, fornecedores e usuarios. Nesta versao nao ha modulo ativo de importacao de NF-e nem endpoint persistente de configuracao visual do sistema.
 
-## Documentacao do produto
+## Documentacao principal
 
-- PRD completo: `docs/PRD.md`
-- Guia da estrutura atual do projeto: `docs/ESTRUTURA_ATUAL_DO_PROJETO.md`
+- `docs/PRD.md`
+- `docs/ESTRUTURA_ATUAL_DO_PROJETO.md`
+- `docs/GUIA_DETALHADO_DO_SISTEMA.md`
+- `docs/GUIA_ESTUDO_CODIGO.md`
+- `docs/GUIA_ESTUDO_CODIGO_DETALHADO.md`
+- `docs/GUIA_REPASSE_EQUIPE.md`
+- `docs/diagramas_modelagem.md`
 
-## Visao geral
+## Escopo atual do sistema
 
-O sistema permite:
+O sistema permite hoje:
 
-- cadastrar produtos por categoria, subcategoria, marca e SKU;
-- controlar variacoes por cor, tamanho ou numeracao;
+- cadastrar produtos com categoria, subcategoria, marca, SKU, fornecedor e estoque minimo;
+- controlar variacoes por cor, tamanho e numeracao;
 - registrar entradas e saidas de estoque com historico;
-- acompanhar itens com estoque baixo;
-- importar XML de NF-e para lancar entradas de forma assistida;
+- acompanhar produtos com estoque baixo;
+- consultar movimentacoes por periodo;
+- registrar vendas por pedido;
+- acompanhar relatorios de vendas por periodo;
 - gerenciar fornecedores;
-- controlar acesso por perfil de usuario;
-- configurar nome, descricao, logo e paleta visual da empresa.
-
-## Principais funcionalidades
-
-### Estoque e catalogo
-
-- cadastro de produtos com validacoes de negocio;
-- variacoes com regras por tipo de item;
-- saldo consolidado por produto;
-- alerta automatico para estoque baixo.
-
-### Operacao
-
-- entrada manual de estoque;
-- saida manual de estoque;
-- historico de movimentacoes;
-- dashboard com indicadores e graficos operacionais.
-
-### Importacao de NF-e
-
-- upload de XML;
-- leitura previa da nota;
-- sugestao de vinculacao por SKU;
-- confirmacao antes de aplicar;
-- bloqueio de importacao duplicada;
-- registro historico da importacao.
-
-### Administracao
-
-- cadastro de usuarios;
-- diferenciacao entre administrador e funcionario;
-- configuracao de identidade visual;
-- adaptacao do tema do sistema com base na logo da empresa.
+- gerenciar usuarios com perfis `admin` e `funcionario`;
+- criar o administrador inicial pelo fluxo de `primeiro acesso`.
 
 ## Stack utilizada
 
@@ -72,39 +47,71 @@ O sistema permite:
 - React Router
 - Vite
 - React Toastify
-- CSS customizado com tema dinamico
+- TypeScript
+- CSS customizado
 
-## Estrutura do projeto
+## Estrutura atual do projeto
 
 ```text
 PROJETO_MVP/
 |-- backend/
 |   |-- app/
+|   |   |-- management/
+|   |   |-- migrations/
+|   |   |-- services/
+|   |   |   |-- configuracao.py
+|   |   |   |-- estoque.py
+|   |   |   |-- pedidos.py
+|   |   |   |-- relatorios.py
+|   |   |   |-- __init__.py
+|   |   |-- admin.py
 |   |   |-- models.py
+|   |   |-- permissions.py
 |   |   |-- serializers.py
-|   |   |-- services.py
-|   |   |-- views.py
+|   |   |-- signals.py
 |   |   |-- tests.py
-|   |-- config/
-|   |   |-- settings.py
 |   |   |-- urls.py
-|   |-- .env.example
+|   |   |-- views.py
+|   |-- backups/
+|   |-- config/
 |   |-- media/
 |   |-- manage.py
+|   |-- requirements.txt
+|   |-- .env.example
 |-- frontend/
+|   |-- public/
 |   |-- src/
+|   |   |-- assets/
 |   |   |-- components/
+|   |   |-- constants/
 |   |   |-- context/
 |   |   |-- hooks/
 |   |   |-- pages/
 |   |   |-- routes/
 |   |   |-- services/
 |   |   |-- utils/
+|   |   |-- App.tsx
+|   |   |-- main.tsx
+|   |   |-- index.css
+|   |-- index.html
+|   |-- vite.config.ts
 |   |-- package.json
-|   |-- vite.config.js
+|   |-- .env.example
 |-- docs/
+|   |-- PRD.md
+|   |-- ESTRUTURA_ATUAL_DO_PROJETO.md
+|   |-- GUIA_DETALHADO_DO_SISTEMA.md
+|   |-- GUIA_ESTUDO_CODIGO.md
+|   |-- GUIA_ESTUDO_CODIGO_DETALHADO.md
+|   |-- GUIA_REPASSE_EQUIPE.md
+|   |-- diagramas_modelagem.md
+|   |-- diagrama_*.puml
+|-- package.json
+|-- package-lock.json
 |-- README.md
 ```
+
+> Importante: o `package.json` da raiz e auxiliar. O frontend real fica em `frontend/` e o backend real fica em `backend/`.
 
 ## Requisitos
 
@@ -114,9 +121,7 @@ PROJETO_MVP/
 - Node.js 20+ recomendado
 - npm 10+ recomendado
 
-## Como a equipe deve rodar o projeto no proprio notebook
-
-> Importante: o `package.json` da raiz e auxiliar. O frontend real fica em `frontend/` e o backend real fica em `backend/`.
+## Como rodar localmente
 
 ### 1. Clonar o repositorio
 
@@ -127,7 +132,7 @@ cd PROJETO_MVP
 
 ### 2. Criar o banco PostgreSQL local
 
-Se a equipe for usar o usuario padrao `postgres`, basta criar o banco:
+Se voce usar o usuario padrao `postgres`, basta criar o banco:
 
 ```powershell
 psql -U postgres -c "CREATE DATABASE estoquepro;"
@@ -150,21 +155,19 @@ pip install -r requirements.txt
 
 Edite `backend/.env` antes de continuar.
 
-Pontos obrigatorios:
+Campos obrigatorios:
 
-- troque `DJANGO_SECRET_KEY` por uma chave real; o placeholder do exemplo nao funciona;
+- troque `DJANGO_SECRET_KEY` por uma chave real;
 - configure `POSTGRES_PASSWORD` com a senha do PostgreSQL local;
-- se necessario, ajuste `POSTGRES_USER`, `POSTGRES_HOST` e `POSTGRES_PORT`.
+- ajuste `POSTGRES_USER`, `POSTGRES_HOST` e `POSTGRES_PORT` se necessario.
 
-Cada pessoa deve gerar a propria `DJANGO_SECRET_KEY` no proprio notebook. Essa chave nao precisa ser igual a sua para desenvolvimento local.
-
-Se precisar gerar uma chave nova rapidamente:
+Para gerar uma chave nova rapidamente:
 
 ```powershell
 python -c "from secrets import token_urlsafe; print(token_urlsafe(50))"
 ```
 
-Exemplo minimo de `backend/.env` para ambiente local:
+Exemplo minimo de `backend/.env`:
 
 ```env
 DJANGO_SECRET_KEY=sua-chave-unica-aqui
@@ -188,8 +191,6 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Se o ambiente virtual ja existir, basta ativar e seguir a partir do `pip install` ou do `migrate`.
-
 ### 4. Configurar e subir o frontend
 
 Em outro terminal:
@@ -201,13 +202,11 @@ npm install
 npm run dev
 ```
 
-O arquivo `frontend/.env` pode ficar assim:
+Exemplo de `frontend/.env`:
 
 ```env
 VITE_API_URL=http://127.0.0.1:8000/api
 ```
-
-Se a API estiver rodando no endereco padrao acima, o frontend tambem funciona sem esse arquivo, mas manter o `.env` ajuda a equipe a padronizar o setup.
 
 ### 5. Acessos locais
 
@@ -218,9 +217,9 @@ Se a API estiver rodando no endereco padrao acima, o frontend tambem funciona se
 ### 6. Primeiro acesso
 
 - se voce criou o superusuario com `createsuperuser`, ja pode entrar com esse usuario;
-- se o banco estiver vazio e ninguem tiver criado usuario ainda, o frontend libera o fluxo de `primeiro acesso`.
+- se o banco estiver vazio e ainda nao existir administrador, o frontend libera o fluxo de `primeiro acesso`.
 
-## Como executar o projeto
+## Como executar o projeto depois do setup
 
 ### Backend
 
@@ -237,20 +236,9 @@ cd frontend
 npm run dev
 ```
 
-## Criacao de usuario administrador
-
-Para criar um superusuario do Django:
-
-```powershell
-cd backend
-.\venv\Scripts\python.exe manage.py createsuperuser
-```
-
-Esse usuario ja pode acessar o admin do Django e tambem possui privilegios administrativos na aplicacao.
-
 ## Variaveis de ambiente
 
-O backend aceita `.env` em `backend/.env` e exige uma chave secreta valida. Abaixo estao os valores padrao reais do codigo:
+### Backend (`backend/.env`)
 
 | Variavel | Descricao | Padrao |
 | --- | --- | --- |
@@ -266,67 +254,83 @@ O backend aceita `.env` em `backend/.env` e exige uma chave secreta valida. Abai
 | `POSTGRES_PORT` | Porta do PostgreSQL | `5432` |
 | `POSTGRES_SSLMODE` | Modo SSL do PostgreSQL | vazio |
 | `DB_CONN_MAX_AGE` | Reuso de conexoes Django | `60` |
-| `VITE_API_URL` | URL base da API no frontend | `http://127.0.0.1:8000/api` |
+
+### Frontend (`frontend/.env`)
+
+| Variavel | Descricao | Padrao |
+| --- | --- | --- |
+| `VITE_API_URL` | URL base da API | `http://127.0.0.1:8000/api` |
 
 O backend usa PostgreSQL. Configure `DATABASE_URL` ou os campos `POSTGRES_*` antes de iniciar a aplicacao. Se `DJANGO_SECRET_KEY` continuar com o placeholder do `.env.example`, o backend nao inicia.
 
 ## Perfis de acesso
 
-- `admin`: acesso administrativo, incluindo usuarios e configuracoes do sistema;
-- `funcionario`: operacao do estoque e consulta das informacoes permitidas.
+- `admin`: acesso administrativo, incluindo usuarios, fornecedores, produtos e variacoes;
+- `funcionario`: operacao do estoque, vendas, relatorios e consultas permitidas.
 
 ## Principais rotas da API
 
-### Autenticacao
+### Autenticacao e sessao
 
+- `GET /api/primeiro-acesso/`
+- `POST /api/primeiro-acesso/`
 - `POST /api/token/`
 - `POST /api/token/refresh/`
 - `GET /api/usuario-logado/`
 
 ### Recursos principais
 
-- `GET/POST /api/produtos/`
+- `GET/POST/PUT/PATCH/DELETE /api/fornecedores/`
+- `GET/POST/PUT/PATCH/DELETE /api/produtos/`
 - `GET /api/produtos/estoque-baixo/`
-- `GET/POST /api/variacoes/`
+- `GET/POST/PUT/PATCH/DELETE /api/variacoes/`
 - `GET /api/movimentacoes/`
-- `GET/POST /api/fornecedores/`
-- `GET/POST /api/usuarios/`
+- `GET/POST /api/pedidos/`
+- `GET /api/pedidos/{id}/`
+- `GET/POST/PUT/PATCH/DELETE /api/usuarios/`
 
-### Operacao de estoque
+### Operacao de estoque e relatorios
 
 - `POST /api/entrada-estoque/`
 - `POST /api/saida-estoque/`
+- `GET /api/relatorios/vendas/?periodo=dia|semana|mes`
 
-### NF-e
+## Principais paginas do frontend
 
-- `POST /api/importacao-nota-fiscal/preview/`
-- `POST /api/importacao-nota-fiscal/aplicar/`
-
-### Configuracao visual
-
-- `GET /api/configuracao-sistema/`
-- `PATCH /api/configuracao-sistema/`
+- `/login`
+- `/primeiro-acesso`
+- `/`
+- `/pedidos`
+- `/novo-pedido`
+- `/produtos`
+- `/novo-produto`
+- `/estoque-baixo`
+- `/movimentacoes`
+- `/nova-movimentacao`
+- `/fornecedores`
+- `/relatorios`
+- `/usuarios`
 
 ## Fluxo recomendado de uso
 
-1. Criar o usuario administrador.
-2. Acessar o sistema e configurar nome, descricao e logo da empresa.
-3. Cadastrar fornecedores.
-4. Cadastrar produtos e variacoes.
-5. Registrar entradas iniciais ou importar NF-e.
-6. Acompanhar dashboard, estoque baixo e movimentacoes.
+1. Criar o administrador inicial com `createsuperuser` ou pelo fluxo de `primeiro acesso`.
+2. Cadastrar fornecedores.
+3. Cadastrar produtos e variacoes.
+4. Registrar entradas iniciais de estoque.
+5. Registrar vendas pelo modulo de pedidos.
+6. Acompanhar dashboard, estoque baixo, movimentacoes e relatorios.
 
 ## Validacoes e comandos uteis
 
-- Backend
+### Backend
 
 ```powershell
 cd backend
 .\venv\Scripts\python.exe manage.py check
-.\venv\Scripts\python.exe manage.py test app
+.\venv\Scripts\python.exe manage.py test --keepdb --noinput
 ```
 
-- Frontend
+### Frontend
 
 ```powershell
 cd frontend
@@ -334,25 +338,17 @@ npm run lint
 npm run build
 ```
 
-## Diferenciais implementados
-
-- tema visual dinamico baseado na identidade da empresa;
-- logo e paleta persistidas no backend;
-- layout simplificado com navegacao superior;
-- dashboard com leitura visual rapida;
-- importacao assistida de nota fiscal;
-- validacoes de estoque e negocio centralizadas no backend.
-
 ## Observacoes importantes
 
-- O banco de dados do projeto e `PostgreSQL`.
-- Arquivos enviados pelo sistema, como logos, sao armazenados em `backend/media/`.
-- Em desenvolvimento, o backend expoe arquivos de media automaticamente quando `DEBUG=True`.
-- O frontend utiliza autenticacao JWT e guarda sessao no `localStorage`.
+- o banco principal do projeto e PostgreSQL;
+- arquivos enviados pelo sistema, como media do Django, ficam em `backend/media/`;
+- em desenvolvimento, o backend expoe arquivos de media automaticamente quando `DEBUG=True`;
+- o frontend usa JWT e guarda a sessao no `localStorage`;
+- a identidade visual exibida no frontend usa os defaults definidos em `frontend/src/utils/branding.ts`, sem endpoint de configuracao persistida nesta versao.
 
 ## Proximos passos sugeridos
 
-- separar arquivos `.env` por ambiente;
-- separar configuracoes por ambiente;
-- criar pipeline de CI para lint, testes e build;
-- incluir historico visual de importacoes NF-e no painel.
+- separar `.env` por ambiente;
+- criar pipeline de CI para testes e build;
+- expandir cobertura automatizada para frontend;
+- documentar exemplos de payload para pedidos, produtos e movimentacoes.
