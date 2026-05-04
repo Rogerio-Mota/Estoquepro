@@ -4,16 +4,6 @@ Sistema web de controle de estoque e vendas com backend em Django REST Framework
 
 O estado atual do projeto esta focado em catalogo, estoque, vendas, relatorios, fornecedores e usuarios. Nesta versao nao ha modulo ativo de importacao de NF-e nem endpoint persistente de configuracao visual do sistema.
 
-## Documentacao principal
-
-- `docs/PRD.md`
-- `docs/ESTRUTURA_ATUAL_DO_PROJETO.md`
-- `docs/GUIA_DETALHADO_DO_SISTEMA.md`
-- `docs/GUIA_ESTUDO_CODIGO.md`
-- `docs/GUIA_ESTUDO_CODIGO_DETALHADO.md`
-- `docs/GUIA_REPASSE_EQUIPE.md`
-- `docs/diagramas_modelagem.md`
-
 ## Escopo atual do sistema
 
 O sistema permite hoje:
@@ -97,15 +87,6 @@ PROJETO_MVP/
 |   |-- vite.config.ts
 |   |-- package.json
 |   |-- .env.example
-|-- docs/
-|   |-- PRD.md
-|   |-- ESTRUTURA_ATUAL_DO_PROJETO.md
-|   |-- GUIA_DETALHADO_DO_SISTEMA.md
-|   |-- GUIA_ESTUDO_CODIGO.md
-|   |-- GUIA_ESTUDO_CODIGO_DETALHADO.md
-|   |-- GUIA_REPASSE_EQUIPE.md
-|   |-- diagramas_modelagem.md
-|   |-- diagrama_*.puml
 |-- package.json
 |-- package-lock.json
 |-- README.md
@@ -351,4 +332,3 @@ npm run build
 - separar `.env` por ambiente;
 - criar pipeline de CI para testes e build;
 - expandir cobertura automatizada para frontend;
-- documentar exemplos de payload para pedidos, produtos e movimentacoes.

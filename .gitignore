@@ -24,3 +24,6 @@ backend/media/
 node_modules/
 dist/
 dist-ssr/
+
+# Documentos locais
+docs/
