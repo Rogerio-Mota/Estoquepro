@@ -1,0 +1,17 @@
+.git
+.gitignore
+.vscode
+node_modules
+frontend/node_modules
+frontend/dist
+backend/venv
+backend/__pycache__
+backend/staticfiles
+backend/media
+backend/tmp-test-runs
+backend/backups
+backend/db.sqlite3
+**/__pycache__
+*.py[cod]
+.env
+.env.*
