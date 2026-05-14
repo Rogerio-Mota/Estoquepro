@@ -1,7 +1,6 @@
 import { useContext } from "react";
 
-import SystemConfigContext from "../context/system-config-context";
-
+import SystemConfigContext from "@/contexts/system-config/context";
 
 export default function useSystemConfig() {
   const context = useContext(SystemConfigContext);

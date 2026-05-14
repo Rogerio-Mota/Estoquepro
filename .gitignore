@@ -14,16 +14,21 @@
 venv/
 backend/venv/
 
-# Bancos locais e arquivos gerados
+# Artefatos locais do backend
 *.sqlite3
 backend/backups/
 backend/tmp-test-runs/
 backend/media/
+backend/staticfiles/
+backend/htmlcov/
 
 # Dependencias Node e artefatos de build
 node_modules/
+frontend/node_modules/
 dist/
 dist-ssr/
+frontend/dist/
+frontend/.vite/
 
-# Documentos locais
-docs/
+# Documentacao temporaria
+docs/tmp/

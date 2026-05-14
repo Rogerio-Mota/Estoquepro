@@ -1,5 +1,19 @@
 # EstoquePro
 
+## Equipe de Desenvolvimento
+
+- **Carinne da Silva Borges - Lider do projeto / Documentacao e Levantamento de Requisitos**
+  Responsavel pela documentacao do projeto e pelo levantamento de requisitos, atuando na organizacao das informacoes, na consolidacao das necessidades do sistema e no apoio a definicao das funcionalidades principais.
+
+- **Rogerio Mota de Melo - Vice-lider / Back-end e Banco de Dados**
+  Responsavel pela estruturacao da logica do sistema, pela modelagem e manutencao do banco de dados, pela integracao com a aplicacao e pelo suporte tecnico as funcionalidades implementadas no projeto.
+
+- **Julio Cesar Lima dos Reis - Desenvolvimento Front-end**
+  Responsavel pelo desenvolvimento da interface do usuario, contribuindo para a implementacao das telas, a organizacao visual dos componentes e a integracao da experiencia de uso com as funcionalidades do sistema.
+
+- **Joao Pedro Strasser Santos - Desenvolvimento Front-end e Design**
+  Responsavel pelas atividades de front-end e design do projeto, atuando na construcao visual das telas, na melhoria da usabilidade, na padronizacao da identidade visual e no fortalecimento da experiencia do usuario.
+
 Sistema web de controle de estoque e vendas com backend em Django REST Framework e frontend em React + Vite.
 
 O estado atual do projeto esta focado em catalogo, estoque, vendas, relatorios, fornecedores e usuarios. Nesta versao nao ha modulo ativo de importacao de NF-e nem endpoint persistente de configuracao visual do sistema.
@@ -17,7 +31,7 @@ O sistema permite hoje:
 - acompanhar relatorios de vendas por periodo;
 - gerenciar fornecedores;
 - gerenciar usuarios com perfis `admin` e `funcionario`;
-- criar o administrador inicial pelo fluxo de `primeiro acesso`.
+- provisionar o administrador principal por comando de manutencao, com opcao de liberar `primeiro acesso` publico quando necessario.
 
 ## Stack utilizada
 
@@ -46,7 +60,6 @@ O sistema permite hoje:
 PROJETO_MVP/
 |-- backend/
 |   |-- app/
-|   |   |-- management/
 |   |   |-- migrations/
 |   |   |-- services/
 |   |   |   |-- configuracao.py
@@ -64,40 +77,49 @@ PROJETO_MVP/
 |   |   |-- views.py
 |   |-- backups/
 |   |-- config/
-|   |-- media/
 |   |-- manage.py
 |   |-- requirements.txt
 |   |-- .env.example
+|-- docs/
+|   |-- README.md
+|   |-- VISAO_E_ESCOPO_DO_SISTEMA.md
+|   |-- mysql_workbench_diagrama_er.sql
 |-- frontend/
 |   |-- public/
 |   |-- src/
-|   |   |-- assets/
+|   |   |-- app/
 |   |   |-- components/
+|   |   |   |-- dashboard/
+|   |   |   |-- feedback/
+|   |   |   |-- layout/
+|   |   |   |-- navigation/
 |   |   |-- constants/
-|   |   |-- context/
+|   |   |-- contexts/
+|   |   |   |-- auth/
+|   |   |   |-- system-config/
 |   |   |-- hooks/
 |   |   |-- pages/
-|   |   |-- routes/
 |   |   |-- services/
+|   |   |-- styles/
 |   |   |-- utils/
-|   |   |-- App.tsx
 |   |   |-- main.tsx
-|   |   |-- index.css
 |   |-- index.html
 |   |-- vite.config.ts
 |   |-- package.json
 |   |-- .env.example
+|-- .gitignore
 |-- package.json
 |-- package-lock.json
 |-- README.md
 ```
 
-> Importante: o `package.json` da raiz e auxiliar. O frontend real fica em `frontend/` e o backend real fica em `backend/`.
+> Importante: o `package.json` da raiz agora centraliza atalhos para frontend e backend, enquanto o codigo real continua em `frontend/` e `backend/`.
+> Diretorios como `backend/media/`, `backend/staticfiles/`, `backend/backups/` e `backend/tmp-test-runs/` sao artefatos locais e ficam fora da estrutura principal do codigo.
 
 ## Requisitos
 
 - Git instalado
-- Python 3.11+ recomendado
+- Python 3.12+ recomendado
 - PostgreSQL 15+ recomendado
 - Node.js 20+ recomendado
 - npm 10+ recomendado
@@ -153,6 +175,7 @@ Exemplo minimo de `backend/.env`:
 ```env
 DJANGO_SECRET_KEY=sua-chave-unica-aqui
 DJANGO_DEBUG=true
+ENABLE_PUBLIC_FIRST_ACCESS=false
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 DJANGO_CORS_ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
 POSTGRES_DB=estoquepro
@@ -168,7 +191,7 @@ Depois aplique as migracoes e suba o servidor:
 
 ```powershell
 python manage.py migrate
-python manage.py createsuperuser
+python manage.py configurar_admin_principal --username admin
 python manage.py runserver
 ```
 
@@ -197,8 +220,9 @@ VITE_API_URL=http://127.0.0.1:8000/api
 
 ### 6. Primeiro acesso
 
-- se voce criou o superusuario com `createsuperuser`, ja pode entrar com esse usuario;
-- se o banco estiver vazio e ainda nao existir administrador, o frontend libera o fluxo de `primeiro acesso`.
+- por padrao, a criacao do administrador principal e feita no backend com `python manage.py configurar_admin_principal --username admin`;
+- o comando pede a senha no terminal e tambem aceita `--password` para automacao;
+- se quiser liberar a criacao publica pela tela de login, defina `ENABLE_PUBLIC_FIRST_ACCESS=true` no `backend/.env`.
 
 ## Como executar o projeto depois do setup
 
@@ -225,6 +249,7 @@ npm run dev
 | --- | --- | --- |
 | `DJANGO_SECRET_KEY` | Chave secreta do Django | obrigatoria, sem padrao utilizavel |
 | `DJANGO_DEBUG` | Ativa modo debug | `false` |
+| `ENABLE_PUBLIC_FIRST_ACCESS` | Libera a criacao publica do admin inicial pela tela de login | `false` |
 | `DJANGO_ALLOWED_HOSTS` | Hosts permitidos | `127.0.0.1,localhost` |
 | `DJANGO_CORS_ALLOWED_ORIGINS` | Origens permitidas para o frontend | `http://127.0.0.1:5173,http://localhost:5173` |
 | `DATABASE_URL` | URL completa do PostgreSQL | vazio |
@@ -279,7 +304,6 @@ O backend usa PostgreSQL. Configure `DATABASE_URL` ou os campos `POSTGRES_*` ant
 ## Principais paginas do frontend
 
 - `/login`
-- `/primeiro-acesso`
 - `/`
 - `/pedidos`
 - `/novo-pedido`
@@ -294,7 +318,7 @@ O backend usa PostgreSQL. Configure `DATABASE_URL` ou os campos `POSTGRES_*` ant
 
 ## Fluxo recomendado de uso
 
-1. Criar o administrador inicial com `createsuperuser` ou pelo fluxo de `primeiro acesso`.
+1. Criar o administrador principal com `python manage.py configurar_admin_principal --username admin`.
 2. Cadastrar fornecedores.
 3. Cadastrar produtos e variacoes.
 4. Registrar entradas iniciais de estoque.
@@ -319,13 +343,85 @@ npm run lint
 npm run build
 ```
 
+### Atalhos pela raiz
+
+```powershell
+npm run lint:frontend
+npm run build:frontend
+npm run type-check:frontend
+npm run check:backend
+```
+
 ## Observacoes importantes
 
 - o banco principal do projeto e PostgreSQL;
 - arquivos enviados pelo sistema, como media do Django, ficam em `backend/media/`;
 - em desenvolvimento, o backend expoe arquivos de media automaticamente quando `DEBUG=True`;
 - o frontend usa JWT e guarda a sessao no `localStorage`;
+- a manutencao do administrador principal deve ser feita pelo comando `configurar_admin_principal`, e nao pela tela publica;
 - a identidade visual exibida no frontend usa os defaults definidos em `frontend/src/utils/branding.ts`, sem endpoint de configuracao persistida nesta versao.
+
+## Deploy de homologacao no Render
+
+Esta versao do projeto foi preparada para deploy com uma unica URL publica:
+
+- o `Dockerfile` gera o build do frontend e publica tudo junto com o backend;
+- o Django serve a SPA do React e os arquivos estaticos com `WhiteNoise`;
+- o blueprint `render.yaml` cria um `Web Service` e um banco PostgreSQL gerenciado.
+
+### Arquivos usados no deploy
+
+- `Dockerfile`
+- `render.yaml`
+- `backend/config/settings.py`
+
+### Passo a passo
+
+1. Suba o repositorio para o GitHub.
+2. No Render, escolha `New +` -> `Blueprint`.
+3. Selecione o repositorio deste projeto.
+4. Confirme a criacao dos recursos definidos em `render.yaml`.
+5. Aguarde o primeiro deploy terminar.
+6. Abra o shell do servico e crie o administrador principal:
+
+```bash
+cd /app/backend
+python manage.py configurar_admin_principal --username admin
+```
+
+7. Envie ao cliente a URL publica do servico e as credenciais de teste.
+
+### Variaveis de ambiente de homologacao
+
+O `render.yaml` ja configura o essencial:
+
+- `DATABASE_URL`
+- `DJANGO_SECRET_KEY`
+- `DJANGO_DEBUG=false`
+- `ENABLE_PUBLIC_FIRST_ACCESS=false`
+- cookies seguros e redirecionamento HTTPS
+
+Se precisar liberar criacao publica do primeiro admin apenas temporariamente, altere:
+
+```env
+ENABLE_PUBLIC_FIRST_ACCESS=true
+```
+
+Depois do primeiro acesso, volte para `false`.
+
+### Como funciona a URL final
+
+- a aplicacao web abre pela raiz `/`;
+- a API continua disponivel em `/api/...`;
+- o admin do Django continua disponivel em `/admin/`.
+
+### Checklist antes de enviar para o cliente
+
+- rode as migracoes mais recentes;
+- crie um usuario administrador de homologacao;
+- cadastre alguns dados basicos de teste;
+- valide login, dashboard, pedidos, produtos e relatorios;
+- combine com o cliente quais fluxos ele deve testar e por quantos dias.
 
 ## Proximos passos sugeridos
 

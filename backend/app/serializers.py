@@ -34,6 +34,16 @@ def _admins_queryset():
     )
 
 
+def _usuario_tipo(instance):
+    if instance.is_superuser:
+        return PerfilUsuario.Tipo.ADMIN
+
+    if hasattr(instance, "perfil") and instance.perfil.tipo == PerfilUsuario.Tipo.ADMIN:
+        return PerfilUsuario.Tipo.ADMIN
+
+    return PerfilUsuario.Tipo.FUNCIONARIO
+
+
 class UsuarioSerializer(serializers.ModelSerializer):
     tipo = serializers.ChoiceField(choices=PerfilUsuario.Tipo.choices, source="perfil.tipo")
     password = serializers.CharField(write_only=True, required=False)
@@ -51,20 +61,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
         perfil_data = attrs.get("perfil", {})
         tipo_desejado = perfil_data.get(
             "tipo",
-            self.instance.perfil.tipo
-            if self.instance is not None and hasattr(self.instance, "perfil")
+            _usuario_tipo(self.instance)
+            if self.instance is not None
             else PerfilUsuario.Tipo.FUNCIONARIO,
         )
-        instancia_eh_admin = bool(
-            self.instance
-            and (
-                self.instance.is_superuser
-                or (
-                    hasattr(self.instance, "perfil")
-                    and self.instance.perfil.tipo == PerfilUsuario.Tipo.ADMIN
-                )
-            )
-        )
+        instancia_eh_admin = bool(self.instance and _usuario_tipo(self.instance) == PerfilUsuario.Tipo.ADMIN)
 
         if tipo_desejado == PerfilUsuario.Tipo.ADMIN:
             admins_existentes = _admins_queryset()
@@ -112,10 +113,15 @@ class UsuarioSerializer(serializers.ModelSerializer):
         if perfil_data:
             PerfilUsuario.objects.update_or_create(
                 user=instance,
-                defaults={"tipo": perfil_data.get("tipo", instance.perfil.tipo)},
+                defaults={"tipo": perfil_data.get("tipo", _usuario_tipo(instance))},
             )
 
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["tipo"] = _usuario_tipo(instance)
+        return data
 
 
 class PrimeiroAcessoSerializer(serializers.Serializer):
@@ -143,11 +149,14 @@ class PrimeiroAcessoSerializer(serializers.Serializer):
 
 
 class UsuarioLogadoSerializer(serializers.ModelSerializer):
-    tipo = serializers.CharField(source="perfil.tipo", read_only=True)
+    tipo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ["id", "username", "tipo"]
+
+    def get_tipo(self, obj):
+        return _usuario_tipo(obj)
 
 
 class FornecedorSerializer(serializers.ModelSerializer):
@@ -171,6 +180,7 @@ class FornecedorSerializer(serializers.ModelSerializer):
 class VariacaoSerializer(serializers.ModelSerializer):
     produto_nome = serializers.ReadOnlyField(source="produto.nome")
     produto_sku = serializers.ReadOnlyField(source="produto.sku")
+    produto_preco_venda = serializers.ReadOnlyField(source="produto.preco_venda")
     estoque_inicial = serializers.IntegerField(
         write_only=True,
         required=False,
@@ -185,6 +195,7 @@ class VariacaoSerializer(serializers.ModelSerializer):
             "produto",
             "produto_nome",
             "produto_sku",
+            "produto_preco_venda",
             "cor",
             "tamanho",
             "numeracao",
@@ -192,7 +203,14 @@ class VariacaoSerializer(serializers.ModelSerializer):
             "estoque_inicial",
             "criado_em",
         ]
-        read_only_fields = ["id", "produto_nome", "produto_sku", "saldo_atual", "criado_em"]
+        read_only_fields = [
+            "id",
+            "produto_nome",
+            "produto_sku",
+            "produto_preco_venda",
+            "saldo_atual",
+            "criado_em",
+        ]
 
     def validate(self, attrs):
         if self.instance is not None and "estoque_inicial" in attrs:

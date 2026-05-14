@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import EmptyState from "../components/EmptyState";
-import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
-import { authJsonRequest, extractCollection } from "../services/api";
+import EmptyState from "@/components/feedback/EmptyState";
+import Layout from "@/components/layout/Layout";
+import PageHeader from "@/components/layout/PageHeader";
+import { authJsonRequest, extractCollection } from "@/services/api";
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);

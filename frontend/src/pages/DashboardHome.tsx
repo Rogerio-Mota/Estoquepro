@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import Layout from "../components/Layout";
-import SummaryCard from "../components/SummaryCard";
-import useAuth from "../hooks/useAuth";
-import { authJsonRequest, extractCollection } from "../services/api";
+import SummaryCard from "@/components/dashboard/SummaryCard";
+import Layout from "@/components/layout/Layout";
+import useAuth from "@/hooks/useAuth";
+import { authJsonRequest, extractCollection } from "@/services/api";
 
 export default function DashboardHome() {
   const { user } = useAuth();

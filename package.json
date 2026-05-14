@@ -1,5 +1,12 @@
 {
-  "dependencies": {
-    "react-toastify": "^11.0.5"
+  "name": "estoquepro",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "type-check:frontend": "npm --prefix frontend run type-check",
+    "check:backend": "cd backend && python manage.py check",
+    "test:backend": "cd backend && python manage.py test"
   }
 }

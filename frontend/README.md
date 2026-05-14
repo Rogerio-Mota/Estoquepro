@@ -14,3 +14,19 @@ npm run dev
 npm run lint
 npm run build
 ```
+
+## Estrutura interna
+
+```text
+src/
+|-- app/           # entrada da aplicacao, rotas e providers
+|-- components/    # compartilhados agrupados por responsabilidade
+|-- constants/
+|-- contexts/      # auth e configuracao visual
+|-- hooks/
+|-- pages/
+|-- services/
+|-- styles/
+|-- utils/
+|-- main.tsx
+```

@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import AccessNotice from "../components/AccessNotice";
-import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
-import useAuth from "../hooks/useAuth";
-import { authJsonRequest } from "../services/api";
+import AccessNotice from "@/components/feedback/AccessNotice";
+import Layout from "@/components/layout/Layout";
+import PageHeader from "@/components/layout/PageHeader";
+import useAuth from "@/hooks/useAuth";
+import { authJsonRequest } from "@/services/api";
 
 export default function EditarUsuario() {
   const { user } = useAuth();

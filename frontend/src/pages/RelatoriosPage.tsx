@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
-import EmptyState from "../components/EmptyState";
-import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
-import SummaryCard from "../components/SummaryCard";
-import { authJsonRequest, extractCollection } from "../services/api";
-import { formatDate } from "../utils/formatters";
+import SummaryCard from "@/components/dashboard/SummaryCard";
+import EmptyState from "@/components/feedback/EmptyState";
+import Layout from "@/components/layout/Layout";
+import PageHeader from "@/components/layout/PageHeader";
+import { authJsonRequest, extractCollection } from "@/services/api";
+import { formatDate } from "@/utils/formatters";
 
 const PERIOD_OPTIONS = [
   { value: "dia", label: "Dia" },
@@ -36,7 +36,7 @@ export default function RelatoriosPage() {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
 
-  async function carregarRelatorios(periodoSelecionado = periodo) {
+  const carregarRelatorios = useCallback(async (periodoSelecionado) => {
     setErro("");
     setCarregando(true);
 
@@ -62,11 +62,11 @@ export default function RelatoriosPage() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     carregarRelatorios("mes");
-  }, []);
+  }, [carregarRelatorios]);
 
   const responsaveis = useMemo(() => {
     return [...new Set(

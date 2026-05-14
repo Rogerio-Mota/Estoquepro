@@ -2,9 +2,9 @@ import type { SVGProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
-import useAuth from "../hooks/useAuth";
-import useSystemConfig from "../hooks/useSystemConfig";
-import { getBrandInitials } from "../utils/branding";
+import useAuth from "@/hooks/useAuth";
+import useSystemConfig from "@/hooks/useSystemConfig";
+import { getBrandInitials } from "@/utils/branding";
 
 type IconName =
   | "dashboard"
@@ -15,6 +15,7 @@ type IconName =
   | "suppliers"
   | "users"
   | "reports"
+  | "settings"
   | "more"
   | "chevron";
 
@@ -37,11 +38,11 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
   { to: "/pedidos", label: "Vendas", icon: "orders", matchPaths: ["/pedidos", "/novo-pedido"] },
   { to: "/produtos", label: "Produtos", icon: "products", matchPaths: ["/produtos", "/novo-produto", "/editar-produto"] },
   { to: "/estoque-baixo", label: "Estoque baixo", icon: "stock", matchPaths: ["/estoque-baixo"] },
-  { to: "/movimentacoes", label: "Movimentações", icon: "movement", matchPaths: ["/movimentacoes", "/nova-movimentacao"] },
+  { to: "/movimentacoes", label: "Movimentacoes", icon: "movement", matchPaths: ["/movimentacoes", "/nova-movimentacao"] },
 ];
 
 const SECONDARY_MENU_ITEMS: MenuItem[] = [
-  { to: "/relatorios", label: "Relatórios", icon: "reports", matchPaths: ["/relatorios"] },
+  { to: "/relatorios", label: "Relatorios", icon: "reports", matchPaths: ["/relatorios"] },
   { to: "/fornecedores", label: "Fornecedores", icon: "suppliers", matchPaths: ["/fornecedores", "/novo-fornecedor", "/editar-fornecedor"] },
 ];
 
@@ -51,10 +52,10 @@ function getRoleLabel(tipo?: string | null) {
   }
 
   if (tipo === "funcionario") {
-    return "Funcionário";
+    return "Funcionario";
   }
 
-  return "Usuário";
+  return "Usuario";
 }
 
 function isItemActive(pathname: string, item: MenuItem) {
@@ -155,6 +156,13 @@ function MenuIcon({
           <path d="M4 18.5h16" />
         </svg>
       );
+    case "settings":
+      return (
+        <svg {...props}>
+          <path d="M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z" />
+          <path d="M19 12a7.5 7.5 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7.8 7.8 0 0 0-1.7-1l-.3-2.6h-4l-.3 2.6a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.8 7.8 0 0 0 1.7 1l.3 2.6h4l.3-2.6a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z" />
+        </svg>
+      );
     case "more":
       return (
         <svg {...props}>
@@ -188,7 +196,8 @@ export default function Sidebar({
   const secondaryMenuItems: MenuItem[] = user?.tipo === "admin"
     ? [
         ...SECONDARY_MENU_ITEMS,
-        { to: "/usuarios", label: "Usuários", icon: "users", matchPaths: ["/usuarios", "/novo-usuario", "/editar-usuario"] },
+        { to: "/usuarios", label: "Usuarios", icon: "users", matchPaths: ["/usuarios", "/novo-usuario", "/editar-usuario"] },
+        { to: "/configuracoes", label: "Configuracoes", icon: "settings", matchPaths: ["/configuracoes"] },
       ]
     : SECONDARY_MENU_ITEMS;
   const brandInitials = getBrandInitials(config.nome_empresa);
@@ -277,7 +286,7 @@ export default function Sidebar({
             ) : (
               <div className="site-header__actions">
                 <div className="site-user">
-                  <span className="site-user__name">{user?.username || "Usuário"}</span>
+                  <span className="site-user__name">{user?.username || "Usuario"}</span>
                   <span className="site-user__role">{getRoleLabel(user?.tipo)}</span>
                 </div>
 
@@ -352,7 +361,7 @@ export default function Sidebar({
                     onClick={() => setMoreMenuOpen((current) => !current)}
                     aria-expanded={moreMenuOpen}
                     aria-haspopup="menu"
-                    aria-label="Abrir mais opções do menu"
+                    aria-label="Abrir mais opcoes do menu"
                   >
                     <MenuIcon name="more" />
                     <span className="site-nav__label">Mais</span>
@@ -384,7 +393,7 @@ export default function Sidebar({
             {isMobile ? (
               <div className="site-header__actions">
                 <div className="site-user">
-                  <span className="site-user__name">{user?.username || "Usuário"}</span>
+                  <span className="site-user__name">{user?.username || "Usuario"}</span>
                   <span className="site-user__role">{getRoleLabel(user?.tipo)}</span>
                 </div>
 

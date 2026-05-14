@@ -2,17 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import EmptyState from "../components/EmptyState";
-import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
-import PaginationControls from "../components/PaginationControls";
-import { authJsonRequest, extractCollection } from "../services/api";
-import { formatCurrency, formatDateTime } from "../utils/formatters";
+import SummaryCard from "@/components/dashboard/SummaryCard";
+import EmptyState from "@/components/feedback/EmptyState";
+import Layout from "@/components/layout/Layout";
+import PageHeader from "@/components/layout/PageHeader";
+import PaginationControls from "@/components/navigation/PaginationControls";
+import { authJsonRequest, extractCollection } from "@/services/api";
+import { formatCurrency, formatDateTime } from "@/utils/formatters";
 
 const ITENS_POR_PAGINA = 6;
 
 export default function PedidosPage() {
   const navigate = useNavigate();
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
   const [vendas, setVendas] = useState([]);
   const [busca, setBusca] = useState("");
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -23,7 +26,11 @@ export default function PedidosPage() {
         const data = await authJsonRequest("/pedidos/", {}, "Erro ao carregar vendas.");
         setVendas(extractCollection(data));
       } catch (error) {
-        toast.error(error.message);
+        const message = error.message || "Erro ao carregar vendas.";
+        setErro(message);
+        toast.error(message);
+      } finally {
+        setCarregando(false);
       }
     }
 
@@ -49,6 +56,48 @@ export default function PedidosPage() {
     return vendasFiltradas.slice(inicio, inicio + ITENS_POR_PAGINA);
   }, [paginaSegura, vendasFiltradas]);
 
+  const faturamentoTotal = useMemo(() => {
+    return vendasFiltradas.reduce(
+      (accumulator, venda) => accumulator + Number(venda.valor_total || 0),
+      0,
+    );
+  }, [vendasFiltradas]);
+
+  const ticketMedio = vendasFiltradas.length
+    ? faturamentoTotal / vendasFiltradas.length
+    : 0;
+
+  const itensVendidos = useMemo(() => {
+    return vendasFiltradas.reduce((accumulator, venda) => {
+      const quantidadeItens = Array.isArray(venda.itens)
+        ? venda.itens.reduce(
+            (subtotal, item) => subtotal + Number(item.quantidade || 0),
+            0,
+          )
+        : 0;
+
+      return accumulator + quantidadeItens;
+    }, 0);
+  }, [vendasFiltradas]);
+
+  const ultimaVenda = useMemo(() => {
+    return vendasFiltradas.reduce((maisRecente, venda) => {
+      if (!maisRecente) {
+        return venda;
+      }
+
+      return new Date(venda.criado_em).getTime() > new Date(maisRecente.criado_em).getTime()
+        ? venda
+        : maisRecente;
+    }, null);
+  }, [vendasFiltradas]);
+
+  const clientesAtendidos = useMemo(() => {
+    return new Set(
+      vendasFiltradas.map((venda) => venda.cliente_nome).filter(Boolean),
+    ).size;
+  }, [vendasFiltradas]);
+
   function atualizarBusca(value) {
     setBusca(value);
     setPaginaAtual(1);
@@ -64,65 +113,159 @@ export default function PedidosPage() {
 
   return (
     <Layout title="Vendas">
-      <PageHeader
-        title="Vendas"
-        action={
-          <button
-            type="button"
-            className="button-primary"
-            onClick={() => navigate("/novo-pedido")}
-          >
-            Nova venda
-          </button>
-        }
-      />
-
-      <div className="page-card section-card">
-        <input
-          type="text"
-          placeholder="Buscar venda"
-          value={busca}
-          onChange={(event) => atualizarBusca(event.target.value)}
+      <div className="sales-page">
+        <PageHeader
+          title="Vendas"
+          description="Acompanhe o historico comercial, consulte clientes atendidos e monitore o faturamento registrado no sistema."
+          action={(
+            <button
+              type="button"
+              className="button-primary"
+              onClick={() => navigate("/novo-pedido")}
+            >
+              Nova venda
+            </button>
+          )}
         />
-      </div>
 
-      <div className="page-card table-card">
-        <div className="table-wrapper">
-          <table className="table-modern">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Cliente</th>
-                <th>Total</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vendasPaginadas.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>
-                    <EmptyState>Nenhuma venda encontrada.</EmptyState>
-                  </td>
-                </tr>
-              ) : (
-                vendasPaginadas.map((venda) => (
-                  <tr key={venda.id}>
-                    <td>{venda.codigo}</td>
-                    <td>{venda.cliente_nome}</td>
-                    <td>{formatCurrency(venda.valor_total)}</td>
-                    <td>{formatDateTime(venda.criado_em)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="summary-grid sales-page__summary">
+          <SummaryCard
+            title="Vendas encontradas"
+            value={vendasFiltradas.length}
+            tone="blue"
+            caption={busca ? "Resultado filtrado pela busca" : "Base completa de vendas"}
+          />
+          <SummaryCard
+            title="Faturamento"
+            value={formatCurrency(faturamentoTotal)}
+            tone="green"
+            caption="Somatorio das vendas exibidas"
+          />
+          <SummaryCard
+            title="Ticket medio"
+            value={formatCurrency(ticketMedio)}
+            tone="orange"
+            caption={`${itensVendidos} unidades vendidas`}
+          />
         </div>
 
-        <PaginationControls
-          page={paginaSegura}
-          totalPages={totalPaginas}
-          onChange={irParaPagina}
-        />
+        {erro ? <div className="alert-error">{erro}</div> : null}
+
+        <section className="page-card section-card sales-toolbar">
+          <div className="sales-toolbar__header">
+            <div>
+              <span className="sales-eyebrow">Consulta comercial</span>
+              <h3 className="section-title">Historico de vendas</h3>
+              <p className="section-subtitle">
+                Busque por codigo da venda ou nome do cliente para encontrar registros com mais rapidez.
+              </p>
+            </div>
+
+            {busca ? (
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => atualizarBusca("")}
+              >
+                Limpar busca
+              </button>
+            ) : null}
+          </div>
+
+          <div className="sales-toolbar__grid">
+            <div className="sales-toolbar__search">
+              <label className="form-label">Buscar venda</label>
+              <input
+                type="text"
+                placeholder="Ex.: VEN-00012 ou nome do cliente"
+                value={busca}
+                onChange={(event) => atualizarBusca(event.target.value)}
+              />
+            </div>
+
+            <div className="sales-inline-metric">
+              <span className="sales-inline-metric__label">Ultima venda</span>
+              <strong className="sales-inline-metric__value">
+                {ultimaVenda ? formatDateTime(ultimaVenda.criado_em) : "-"}
+              </strong>
+            </div>
+
+            <div className="sales-inline-metric">
+              <span className="sales-inline-metric__label">Clientes atendidos</span>
+              <strong className="sales-inline-metric__value">{clientesAtendidos}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="page-card table-card sales-table-card">
+          {carregando ? (
+            <EmptyState>Carregando vendas...</EmptyState>
+          ) : (
+            <>
+              <div className="table-wrapper">
+                <table className="table-modern">
+                  <thead>
+                    <tr>
+                      <th>Venda</th>
+                      <th>Cliente</th>
+                      <th>Status</th>
+                      <th>Total</th>
+                      <th>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendasPaginadas.length === 0 ? (
+                      <tr>
+                        <td colSpan={5}>
+                          <EmptyState>Nenhuma venda encontrada.</EmptyState>
+                        </td>
+                      </tr>
+                    ) : (
+                      vendasPaginadas.map((venda) => {
+                        const quantidadeItens = Array.isArray(venda.itens)
+                          ? venda.itens.reduce(
+                              (accumulator, item) => accumulator + Number(item.quantidade || 0),
+                              0,
+                            )
+                          : 0;
+
+                        return (
+                          <tr key={venda.id}>
+                            <td>
+                              <div className="table-cell-primary">{venda.codigo}</div>
+                              <div className="table-cell-meta">
+                                {quantidadeItens} {quantidadeItens === 1 ? "unidade" : "unidades"}
+                              </div>
+                            </td>
+                            <td>
+                              <div className="table-cell-primary">{venda.cliente_nome}</div>
+                              <div className="table-cell-meta">Pedido finalizado no caixa</div>
+                            </td>
+                            <td>
+                              <span className="badge badge-success">Finalizada</span>
+                            </td>
+                            <td>
+                              <div className="table-cell-primary">
+                                {formatCurrency(venda.valor_total)}
+                              </div>
+                            </td>
+                            <td>{formatDateTime(venda.criado_em)}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <PaginationControls
+                page={paginaSegura}
+                totalPages={totalPaginas}
+                onChange={irParaPagina}
+              />
+            </>
+          )}
+        </section>
       </div>
     </Layout>
   );

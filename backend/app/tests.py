@@ -1,8 +1,11 @@
+from decimal import Decimal
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -89,10 +92,33 @@ class PrimeiroAcessoTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
+    def test_status_indica_quando_primeiro_acesso_publico_esta_desabilitado(self):
+        status_response = self.client.get("/api/primeiro-acesso/")
+
+        self.assertEqual(status_response.status_code, 200)
+        self.assertTrue(status_response.data["primeiro_acesso_pendente"])
+        self.assertFalse(status_response.data["primeiro_acesso_publico_habilitado"])
+
+    def test_primeiro_acesso_retorna_403_quando_fluxo_publico_esta_desabilitado(self):
+        response = self.client.post(
+            "/api/primeiro-acesso/",
+            {
+                "username": "admininicial",
+                "password": "123456",
+                "password_confirmacao": "123456",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("detail", response.data)
+
+    @override_settings(ENABLE_PUBLIC_FIRST_ACCESS=True)
     def test_primeiro_acesso_cria_administrador_inicial(self):
         status_response = self.client.get("/api/primeiro-acesso/")
         self.assertEqual(status_response.status_code, 200)
         self.assertTrue(status_response.data["primeiro_acesso_pendente"])
+        self.assertTrue(status_response.data["primeiro_acesso_publico_habilitado"])
 
         create_response = self.client.post(
             "/api/primeiro-acesso/",
@@ -107,6 +133,7 @@ class PrimeiroAcessoTests(TestCase):
         self.assertEqual(create_response.status_code, 201)
         self.assertEqual(User.objects.get(username="admininicial").perfil.tipo, PerfilUsuario.Tipo.ADMIN)
 
+    @override_settings(ENABLE_PUBLIC_FIRST_ACCESS=True)
     def test_primeiro_acesso_bloqueia_segunda_criacao(self):
         criar_admin("root")
 
@@ -122,6 +149,79 @@ class PrimeiroAcessoTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("detail", response.data)
+
+
+class ConfigurarAdministradorPrincipalCommandTests(TestCase):
+    def test_comando_cria_administrador_principal(self):
+        call_command(
+            "configurar_admin_principal",
+            "--username",
+            "adminprincipal",
+            "--password",
+            "123456",
+        )
+
+        user = User.objects.get(username="adminprincipal")
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertEqual(user.perfil.tipo, PerfilUsuario.Tipo.ADMIN)
+
+    def test_comando_recusa_substituicao_sem_flag(self):
+        criar_admin("adminatual")
+        User.objects.create_user(username="novoadmin", password="123456")
+
+        with self.assertRaises(CommandError):
+            call_command(
+                "configurar_admin_principal",
+                "--username",
+                "novoadmin",
+                "--password",
+                "123456",
+            )
+
+    def test_comando_substitui_administrador_existente(self):
+        admin_atual = criar_admin("adminatual")
+        admin_atual.is_staff = True
+        admin_atual.is_superuser = True
+        admin_atual.save(update_fields=["is_staff", "is_superuser"])
+        User.objects.create_user(username="novoadmin", password="123456")
+
+        call_command(
+            "configurar_admin_principal",
+            "--username",
+            "novoadmin",
+            "--password",
+            "654321",
+            "--substituir",
+        )
+
+        admin_atual.refresh_from_db()
+        novo_admin = User.objects.get(username="novoadmin")
+
+        self.assertFalse(admin_atual.is_staff)
+        self.assertFalse(admin_atual.is_superuser)
+        self.assertEqual(admin_atual.perfil.tipo, PerfilUsuario.Tipo.FUNCIONARIO)
+        self.assertTrue(novo_admin.is_staff)
+        self.assertTrue(novo_admin.is_superuser)
+        self.assertEqual(novo_admin.perfil.tipo, PerfilUsuario.Tipo.ADMIN)
+
+
+class UsuarioLogadoTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_superusuario_retorna_tipo_admin_no_endpoint_de_sessao(self):
+        superuser = User.objects.create_superuser(
+            username="root",
+            email="root@example.com",
+            password="123456",
+        )
+        self.client.force_authenticate(user=superuser)
+
+        response = self.client.get("/api/usuario-logado/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["tipo"], PerfilUsuario.Tipo.ADMIN)
 
 
 class UsuarioAdminUnicoTests(TestCase):
@@ -228,6 +328,20 @@ class VariacaoAutomaticaTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("estoque_inicial", response.data)
+
+    def test_listagem_de_variacoes_expoe_preco_de_venda_do_produto(self):
+        variacao = Variacao.objects.create(
+            produto=self.produto,
+            cor="Cinza",
+            tamanho=Variacao.Tamanho.P,
+            saldo_atual=3,
+        )
+
+        response = self.client.get("/api/variacoes/")
+
+        self.assertEqual(response.status_code, 200)
+        registro = next(item for item in response.data if item["id"] == variacao.id)
+        self.assertEqual(registro["produto_preco_venda"], Decimal("69.90"))
 
 
 class FornecedorTests(TestCase):

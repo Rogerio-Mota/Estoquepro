@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import EmptyState from "../components/EmptyState";
-import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
-import PaginationControls from "../components/PaginationControls";
-import { authJsonRequest, extractCollection } from "../services/api";
-import { formatDate } from "../utils/formatters";
+import EmptyState from "@/components/feedback/EmptyState";
+import Layout from "@/components/layout/Layout";
+import PageHeader from "@/components/layout/PageHeader";
+import PaginationControls from "@/components/navigation/PaginationControls";
+import { authJsonRequest, extractCollection } from "@/services/api";
+import { formatDate } from "@/utils/formatters";
 
 const ITENS_POR_PAGINA = 6;
 const PERIOD_OPTIONS = [

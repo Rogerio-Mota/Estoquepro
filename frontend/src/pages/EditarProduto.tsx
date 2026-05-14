@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import AccessNotice from "../components/AccessNotice";
-import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
+import AccessNotice from "@/components/feedback/AccessNotice";
+import Layout from "@/components/layout/Layout";
+import PageHeader from "@/components/layout/PageHeader";
 import {
   CATEGORY_OPTIONS,
   getSubcategoryOptions,
-} from "../constants/productOptions";
-import useAuth from "../hooks/useAuth";
-import { authJsonRequest, extractCollection } from "../services/api";
+} from "@/constants/productOptions";
+import useAuth from "@/hooks/useAuth";
+import { authJsonRequest, extractCollection } from "@/services/api";
 
 export default function EditarProduto() {
   const { user } = useAuth();

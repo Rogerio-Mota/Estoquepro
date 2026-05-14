@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import AuthContext from "./auth-context";
+import AuthContext from "@/contexts/auth/context";
 import {
   clearSession,
   getStoredUser,
@@ -8,7 +8,7 @@ import {
   loginRequest,
   meRequest,
   setStoredSession,
-} from "../services/api";
+} from "@/services/api";
 
 
 export function AuthProvider({ children }) {

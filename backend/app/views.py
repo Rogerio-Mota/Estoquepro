@@ -4,7 +4,7 @@ from django.db.models import F, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -26,6 +26,7 @@ from .services import (
     criar_administrador_inicial,
     existe_administrador_configurado,
     gerar_relatorio_vendas,
+    primeiro_acesso_publico_habilitado,
     registrar_movimentacao,
     resolver_periodo_relatorio,
 )
@@ -82,11 +83,17 @@ class PrimeiroAcessoView(APIView):
         return Response(
             {
                 "primeiro_acesso_pendente": not existe_administrador_configurado(),
+                "primeiro_acesso_publico_habilitado": primeiro_acesso_publico_habilitado(),
             }
         )
 
     def post(self, request):
         from .serializers import PrimeiroAcessoSerializer
+
+        if not primeiro_acesso_publico_habilitado():
+            raise PermissionDenied(
+                "O primeiro acesso publico esta desabilitado. Use o comando de manutencao do backend para configurar o administrador principal."
+            )
 
         serializer = PrimeiroAcessoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

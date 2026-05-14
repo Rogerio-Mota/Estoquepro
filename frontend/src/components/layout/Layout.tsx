@@ -1,9 +1,8 @@
 import { useState } from "react";
 
-import useIsMobile from "../hooks/useIsMobile";
-import Sidebar from "./Sidebar";
-import Topbar from "./Topbar";
-
+import Sidebar from "@/components/layout/Sidebar";
+import Topbar from "@/components/layout/Topbar";
+import useIsMobile from "@/hooks/useIsMobile";
 
 export default function Layout({ title, children, showTopbar = false }) {
   const isMobile = useIsMobile();

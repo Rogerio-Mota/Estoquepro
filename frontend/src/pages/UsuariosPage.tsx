@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import AccessNotice from "../components/AccessNotice";
-import EmptyState from "../components/EmptyState";
-import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
-import PaginationControls from "../components/PaginationControls";
-import useAuth from "../hooks/useAuth";
-import { authJsonRequest, extractCollection } from "../services/api";
+import AccessNotice from "@/components/feedback/AccessNotice";
+import EmptyState from "@/components/feedback/EmptyState";
+import Layout from "@/components/layout/Layout";
+import PageHeader from "@/components/layout/PageHeader";
+import PaginationControls from "@/components/navigation/PaginationControls";
+import useAuth from "@/hooks/useAuth";
+import { authJsonRequest, extractCollection } from "@/services/api";
 
 const ITENS_POR_PAGINA = 6;
 
