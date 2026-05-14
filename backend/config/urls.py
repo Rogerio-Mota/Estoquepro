@@ -17,8 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import include, path, re_path
-from django.views.generic import TemplateView
+from django.urls import include, path
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -34,14 +33,3 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-frontend_index = settings.BASE_DIR.parent / "frontend" / "dist" / "index.html"
-
-if frontend_index.exists():
-    urlpatterns += [
-        re_path(
-            r"^(?!api/|admin/|static/|media/).*$",
-            TemplateView.as_view(template_name="index.html"),
-            name="frontend",
-        ),
-    ]

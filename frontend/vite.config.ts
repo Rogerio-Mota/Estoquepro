@@ -7,8 +7,7 @@ import react from "@vitejs/plugin-react";
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const resolveFromProject = (...segments) => path.resolve(projectRoot, ...segments);
 
-export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/static/" : "/",
+export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
@@ -30,4 +29,4 @@ export default defineConfig(({ command }) => ({
   optimizeDeps: {
     include: ["react-toastify"],
   },
-}));
+});
