@@ -20,7 +20,7 @@ TAMANHOS_CINTO = {"P", "M", "G", "GG"}
 class PerfilUsuario(models.Model):
     class Tipo(models.TextChoices):
         ADMIN = "admin", "Administrador"
-        FUNCIONARIO = "funcionario", "Funcionario"
+        FUNCIONARIO = "funcionario", "Funcionário"
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="perfil")
     tipo = models.CharField(
@@ -31,8 +31,8 @@ class PerfilUsuario(models.Model):
 
     class Meta:
         ordering = ("user__username",)
-        verbose_name = "perfil de usuario"
-        verbose_name_plural = "perfis de usuario"
+        verbose_name = "perfil de usuário"
+        verbose_name_plural = "perfis de usuário"
 
     def __str__(self):
         return f"{self.user.username} ({self.get_tipo_display()})"
@@ -56,16 +56,16 @@ class Fornecedor(models.Model):
 class Produto(models.Model):
     class Categoria(models.TextChoices):
         ROUPA = "roupa", "Roupa"
-        CALCADO = "calcado", "Calcado"
-        ACESSORIO = "acessorio", "Acessorio"
+        CALCADO = "calcado", "Calçado"
+        ACESSORIO = "acessorio", "Acessório"
         PERFUMARIA = "perfumaria", "Perfumaria"
         GERAL = "geral", "Geral"
 
     class Subcategoria(models.TextChoices):
         CAMISA = "camisa", "Camisa"
-        CALCA = "calca", "Calca"
+        CALCA = "calca", "Calça"
         BERMUDA = "bermuda", "Bermuda"
-        TENIS = "tenis", "Tenis"
+        TENIS = "tenis", "Tênis"
         CINTO = "cinto", "Cinto"
         BIJUTERIA = "bijuteria", "Bijuteria Masculina"
         PERFUME = "perfume", "Perfume"
@@ -120,19 +120,19 @@ class Produto(models.Model):
             raise ValidationError(
                 {
                     "subcategoria": (
-                        "A subcategoria selecionada nÃ£o pertence Ã  categoria informada."
+                        "A subcategoria selecionada não pertence à categoria informada."
                     )
                 }
             )
 
         if self.preco_custo is not None and self.preco_custo < 0:
             raise ValidationError(
-                {"preco_custo": "O preÃ§o de custo nÃ£o pode ser negativo."}
+                {"preco_custo": "O preço de custo não pode ser negativo."}
             )
 
         if self.preco_venda is not None and self.preco_venda <= 0:
             raise ValidationError(
-                {"preco_venda": "O preco de venda deve ser maior que zero."}
+                {"preco_venda": "O preço de venda deve ser maior que zero."}
             )
 
         if (
@@ -141,7 +141,7 @@ class Produto(models.Model):
             and self.preco_venda < self.preco_custo
         ):
             raise ValidationError(
-                {"preco_venda": "O preÃ§o de venda nÃ£o pode ser menor que o preÃ§o de custo."}
+                {"preco_venda": "O preço de venda não pode ser menor que o preço de custo."}
             )
 
         sku_duplicado = (
@@ -183,7 +183,7 @@ class Variacao(models.Model):
         M = "M", "M"
         G = "G", "G"
         GG = "GG", "GG"
-        U = "U", "Unico"
+        U = "U", "Único"
 
     class Numeracao(models.TextChoices):
         N36 = "36", "36"
@@ -221,8 +221,8 @@ class Variacao(models.Model):
 
     class Meta:
         ordering = ("produto__nome", "cor", "tamanho", "numeracao")
-        verbose_name = "variacao"
-        verbose_name_plural = "variacoes"
+        verbose_name = "variação"
+        verbose_name_plural = "variações"
 
     def __str__(self):
         detalhes = [self.produto.nome]
@@ -232,7 +232,7 @@ class Variacao(models.Model):
         if self.tamanho:
             detalhes.append(f"Tamanho {self.tamanho}")
         if self.numeracao:
-            detalhes.append(f"NumeraÃ§Ã£o {self.numeracao}")
+            detalhes.append(f"Numeração {self.numeracao}")
 
         return " - ".join(detalhes)
 
@@ -240,7 +240,7 @@ class Variacao(models.Model):
         super().clean()
 
         if self.saldo_atual < 0:
-            raise ValidationError({"saldo_atual": "O saldo atual nÃ£o pode ser negativo."})
+            raise ValidationError({"saldo_atual": "O saldo atual não pode ser negativo."})
 
         if not self.produto_id:
             return
@@ -249,28 +249,28 @@ class Variacao(models.Model):
 
         if subcategoria in SUBCATEGORIAS_COM_TAMANHO:
             if not self.tamanho:
-                raise ValidationError({"tamanho": "Esta variaÃ§Ã£o exige um tamanho."})
+                raise ValidationError({"tamanho": "Esta variação exige um tamanho."})
             if self.numeracao:
                 raise ValidationError(
-                    {"numeracao": "Esta variaÃ§Ã£o nÃ£o deve usar numeraÃ§Ã£o."}
+                    {"numeracao": "Esta variação não deve usar numeração."}
                 )
 
         elif subcategoria in SUBCATEGORIAS_COM_NUMERACAO:
             if not self.numeracao:
                 raise ValidationError(
-                    {"numeracao": "Esta variaÃ§Ã£o exige uma numeraÃ§Ã£o."}
+                    {"numeracao": "Esta variação exige uma numeração."}
                 )
             if self.tamanho:
-                raise ValidationError({"tamanho": "Esta variaÃ§Ã£o nÃ£o deve usar tamanho."})
+                raise ValidationError({"tamanho": "Esta variação não deve usar tamanho."})
 
         elif subcategoria in SUBCATEGORIAS_COM_TAMANHO_UNICO:
             if self.tamanho and self.tamanho != self.Tamanho.U:
                 raise ValidationError(
-                    {"tamanho": "Use tamanho Ãºnico ou deixe o campo em branco."}
+                    {"tamanho": "Use tamanho único ou deixe o campo em branco."}
                 )
             if self.numeracao:
                 raise ValidationError(
-                    {"numeracao": "Esta variaÃ§Ã£o nÃ£o deve usar numeraÃ§Ã£o."}
+                    {"numeracao": "Esta variação não deve usar numeração."}
                 )
 
         if subcategoria in {
@@ -279,7 +279,7 @@ class Variacao(models.Model):
             Produto.Subcategoria.BERMUDA,
         } and self.tamanho and self.tamanho not in TAMANHOS_PADRAO:
             raise ValidationError(
-                {"tamanho": "Tamanho invÃ¡lido para a subcategoria selecionada."}
+                {"tamanho": "Tamanho inválido para a subcategoria selecionada."}
             )
 
         if (
@@ -287,7 +287,7 @@ class Variacao(models.Model):
             and self.tamanho
             and self.tamanho not in TAMANHOS_CINTO
         ):
-            raise ValidationError({"tamanho": "Tamanho invÃ¡lido para cintos."})
+            raise ValidationError({"tamanho": "Tamanho inválido para cintos."})
 
         duplicada = (
             Variacao.objects.filter(
@@ -303,8 +303,8 @@ class Variacao(models.Model):
             raise ValidationError(
                 {
                     "produto": (
-                        "JÃ¡ existe uma variaÃ§Ã£o cadastrada com a mesma combinaÃ§Ã£o "
-                        "de cor, tamanho e numeraÃ§Ã£o."
+                        "Já existe uma variação cadastrada com a mesma combinação "
+                        "de cor, tamanho e numeração."
                     )
                 }
             )
@@ -358,7 +358,7 @@ class PedidoVenda(models.Model):
 class Movimentacao(models.Model):
     class Tipo(models.TextChoices):
         ENTRADA = "entrada", "Entrada"
-        SAIDA = "saida", "Saida"
+        SAIDA = "saida", "Saída"
 
     variacao = models.ForeignKey(
         Variacao,
@@ -387,8 +387,8 @@ class Movimentacao(models.Model):
 
     class Meta:
         ordering = ("-data", "-id")
-        verbose_name = "movimentacao"
-        verbose_name_plural = "movimentacoes"
+        verbose_name = "movimentação"
+        verbose_name_plural = "movimentações"
 
     def __str__(self):
         return f"{self.get_tipo_display()} - {self.quantidade} - {self.variacao}"
@@ -398,7 +398,7 @@ class Movimentacao(models.Model):
 
         if self.quantidade < 1:
             raise ValidationError(
-                {"quantidade": "A quantidade da movimentaÃ§Ã£o deve ser maior que zero."}
+                {"quantidade": "A quantidade da movimentação deve ser maior que zero."}
             )
 
     def save(self, *args, **kwargs):
@@ -450,7 +450,7 @@ class PedidoVendaItem(models.Model):
 
         if self.preco_unitario < 0:
             raise ValidationError(
-                {"preco_unitario": "O preÃ§o unitÃ¡rio nÃ£o pode ser negativo."}
+                {"preco_unitario": "O preço unitário não pode ser negativo."}
             )
 
     def save(self, *args, **kwargs):

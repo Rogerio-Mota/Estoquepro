@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import Layout from "@/components/layout/Layout";
+import VariationsPreview from "@/components/products/VariationsPreview";
 import useAuth from "@/hooks/useAuth";
 import { authJsonRequest, extractCollection } from "@/services/api";
 
@@ -151,6 +152,11 @@ export default function DashboardHome() {
                         <td>
                           <div className="table-cell-primary">{produto.nome}</div>
                           <div className="table-cell-meta">{produto.marca || "-"}</div>
+                          <VariationsPreview
+                            variacoes={produto.variacoes}
+                            maxItems={2}
+                            showSaldo
+                          />
                         </td>
                         <td>{produto.estoque_total}</td>
                         <td>{produto.estoque_minimo}</td>

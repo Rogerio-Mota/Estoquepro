@@ -7,7 +7,7 @@ from ..models import Movimentacao, Variacao
 
 OBSERVACOES_PADRAO = {
     Movimentacao.Tipo.ENTRADA: "Entrada registrada pelo sistema.",
-    Movimentacao.Tipo.SAIDA: "Saida registrada pelo sistema.",
+    Movimentacao.Tipo.SAIDA: "Saída registrada pelo sistema.",
 }
 
 
@@ -26,12 +26,12 @@ def criar_variacao_com_estoque_inicial(
         estoque_inicial = int(estoque_inicial or 0)
     except (TypeError, ValueError) as error:
         raise ValidationError(
-            {"estoque_inicial": "Informe uma quantidade inicial valida."}
+            {"estoque_inicial": "Informe uma quantidade inicial válida."}
         ) from error
 
     if estoque_inicial < 0:
         raise ValidationError(
-            {"estoque_inicial": "O estoque inicial nao pode ser negativo."}
+            {"estoque_inicial": "O estoque inicial não pode ser negativo."}
         )
 
     variacao = Variacao(
@@ -50,7 +50,7 @@ def criar_variacao_com_estoque_inicial(
             quantidade=estoque_inicial,
             observacao=(
                 observacao
-                or f"Entrada inicial automatica do cadastro - {produto.nome}"
+                or f"Entrada inicial automática do cadastro - {produto.nome}"
             ),
             usuario=usuario,
         )
@@ -76,22 +76,22 @@ def registrar_movimentacao(
             .get(pk=variacao_id)
         )
     except ObjectDoesNotExist as error:
-        raise ValidationError({"variacao": "Variacao informada nao foi encontrada."}) from error
+        raise ValidationError({"variacao": "Variação informada não foi encontrada."}) from error
 
     try:
         quantidade = int(quantidade)
     except (TypeError, ValueError) as error:
-        raise ValidationError({"quantidade": "Informe uma quantidade valida."}) from error
+        raise ValidationError({"quantidade": "Informe uma quantidade válida."}) from error
 
     if quantidade < 1:
         raise ValidationError({"quantidade": "A quantidade deve ser maior que zero."})
 
     if tipo not in {Movimentacao.Tipo.ENTRADA, Movimentacao.Tipo.SAIDA}:
-        raise ValidationError({"tipo": "Tipo de movimentacao invalido."})
+        raise ValidationError({"tipo": "Tipo de movimentação inválido."})
 
     if tipo == Movimentacao.Tipo.SAIDA and quantidade > variacao_atual.saldo_atual:
         raise ValidationError(
-            {"quantidade": "Estoque insuficiente para realizar a saida."}
+            {"quantidade": "Estoque insuficiente para realizar a saída."}
         )
 
     saldo_atualizado = variacao_atual.saldo_atual + (

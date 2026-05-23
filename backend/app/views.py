@@ -1,11 +1,10 @@
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import F, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -23,10 +22,7 @@ from .serializers import (
     VariacaoSerializer,
 )
 from .services import (
-    criar_administrador_inicial,
-    existe_administrador_configurado,
     gerar_relatorio_vendas,
-    primeiro_acesso_publico_habilitado,
     registrar_movimentacao,
     resolver_periodo_relatorio,
 )
@@ -60,9 +56,18 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         usuario = self.get_object()
+        if usuario.is_superuser:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Use o comando de manutenção para transferir o administrador principal."
+                    )
+                }
+            )
+
         if _usuario_eh_admin(usuario) and not _existe_outro_admin(usuario.pk):
             raise ValidationError(
-                {"detail": "O sistema precisa manter um administrador principal."}
+                {"detail": "O sistema precisa manter pelo menos um administrador ativo."}
             )
 
         return super().destroy(request, *args, **kwargs)
@@ -74,45 +79,6 @@ class UsuarioLogadoView(APIView):
     def get(self, request):
         serializer = UsuarioLogadoSerializer(request.user)
         return Response(serializer.data)
-
-
-class PrimeiroAcessoView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        return Response(
-            {
-                "primeiro_acesso_pendente": not existe_administrador_configurado(),
-                "primeiro_acesso_publico_habilitado": primeiro_acesso_publico_habilitado(),
-            }
-        )
-
-    def post(self, request):
-        from .serializers import PrimeiroAcessoSerializer
-
-        if not primeiro_acesso_publico_habilitado():
-            raise PermissionDenied(
-                "O primeiro acesso publico esta desabilitado. Use o comando de manutencao do backend para configurar o administrador principal."
-            )
-
-        serializer = PrimeiroAcessoSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        try:
-            user = criar_administrador_inicial(
-                username=serializer.validated_data["username"],
-                password=serializer.validated_data["password"],
-            )
-        except DjangoValidationError as error:
-            _raise_drf_validation(error)
-
-        return Response(
-            {
-                "message": "Administrador inicial criado com sucesso.",
-                "username": user.username,
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class BaseMovimentacaoEstoqueView(APIView):
@@ -158,7 +124,7 @@ class EntradaEstoqueView(BaseMovimentacaoEstoqueView):
 class SaidaEstoqueView(BaseMovimentacaoEstoqueView):
     serializer_class = SaidaEstoqueSerializer
     tipo_movimentacao = Movimentacao.Tipo.SAIDA
-    mensagem_sucesso = "Saida registrada com sucesso."
+    mensagem_sucesso = "Saída registrada com sucesso."
 
 
 class RelatorioVendasView(APIView):

@@ -39,10 +39,10 @@ function buildVariacaoResumo(variacao) {
     partes.push(`Tamanho ${variacao.tamanho}`);
   }
   if (variacao.numeracao) {
-    partes.push(`Numeracao ${variacao.numeracao}`);
+    partes.push(`Numeração ${variacao.numeracao}`);
   }
 
-  return partes.join(" | ") || "Variacao sem detalhamento complementar";
+  return partes.join(" | ") || "Variação sem detalhamento complementar";
 }
 
 function buildEmptyItem() {
@@ -75,7 +75,7 @@ export default function PedidoFormPage() {
         const variacoesData = await authJsonRequest(
           "/variacoes/",
           {},
-          "Erro ao carregar variacoes.",
+          "Erro ao carregar variações.",
         );
         setVariacoes(extractCollection(variacoesData));
       } catch (error) {
@@ -224,7 +224,7 @@ export default function PedidoFormPage() {
       if (itemSemSaldo) {
         const variacaoSelecionada = variacoesPorId.get(String(itemSemSaldo.variacao));
         throw new Error(
-          `${variacaoSelecionada?.produto_nome || "A variacao"} nao possui saldo suficiente.`,
+          `${variacaoSelecionada?.produto_nome || "A variação"} não possui saldo suficiente.`,
         );
       }
 
@@ -261,14 +261,14 @@ export default function PedidoFormPage() {
       <div className="sales-page sales-page--composer">
         <PageHeader
           title="Nova venda"
-          description="Monte o pedido com mais seguranca, acompanhe o total em tempo real e revise os itens antes de concluir o registro."
+          description="Monte o pedido com mais segurança, acompanhe o total em tempo real e revise os itens antes de concluir o registro."
           action={(
             <button
               type="button"
               className="button-secondary"
               onClick={() => navigate("/pedidos")}
             >
-              Ver historico
+              Ver histórico
             </button>
           )}
         />
@@ -278,10 +278,10 @@ export default function PedidoFormPage() {
             title="Cliente"
             value={form.cliente_nome.trim() || "A definir"}
             tone="blue"
-            caption="Identificacao da venda"
+            caption="Identificação da venda"
           />
           <SummaryCard
-            title="Itens lancados"
+            title="Itens lançados"
             value={`${itensCompletos}/${form.itens.length}`}
             tone="orange"
             caption={`${totalUnidades} unidades no pedido`}
@@ -290,7 +290,11 @@ export default function PedidoFormPage() {
             title="Total parcial"
             value={formatCurrency(totalVenda)}
             tone="green"
-            caption={vendaProntaParaSalvar ? "Pronto para registrar" : "Revise os campos obrigatorios"}
+            caption={
+              vendaProntaParaSalvar
+                ? "Pronto para registrar."
+                : "Revise os campos obrigatórios."
+            }
           />
         </div>
 
@@ -305,7 +309,7 @@ export default function PedidoFormPage() {
             <div className="form-section sales-form-intro">
               <div className="sales-form-intro__head">
                 <div>
-                  <span className="sales-eyebrow">Identificacao da venda</span>
+                  <span className="sales-eyebrow">Identificação da venda</span>
                   <h3 className="section-title">Dados gerais</h3>
                   <p className="section-subtitle sales-section__subtitle">
                     Informe o cliente e acompanhe o total parcial enquanto monta o pedido.
@@ -349,7 +353,7 @@ export default function PedidoFormPage() {
                 <div>
                   <h3 className="section-title">Itens do pedido</h3>
                   <p className="section-subtitle sales-section__subtitle">
-                    Selecione a variacao e o sistema ja traz o preco de venda cadastrado para agilizar o lancamento.
+                    Selecione a variação e o sistema já traz o preço de venda cadastrado para agilizar o lançamento.
                   </p>
                 </div>
 
@@ -384,7 +388,7 @@ export default function PedidoFormPage() {
                           <h4 className="sales-item-card__title">
                             {variacaoSelecionada
                               ? variacaoSelecionada.produto_nome
-                              : "Selecione uma variacao"}
+                              : "Selecione uma variação"}
                           </h4>
                           <p className="table-cell-meta">
                             {variacaoSelecionada
@@ -421,11 +425,11 @@ export default function PedidoFormPage() {
                             </strong>
                           </div>
                           <div className="sales-item-card__meta-card">
-                            <span className="sales-item-card__meta-label">Disponivel</span>
+                            <span className="sales-item-card__meta-label">Disponível</span>
                             <strong className="sales-item-card__meta-value">{saldoDisponivel}</strong>
                           </div>
                           <div className="sales-item-card__meta-card">
-                            <span className="sales-item-card__meta-label">Preco padrao</span>
+                            <span className="sales-item-card__meta-label">Preço padrão</span>
                             <strong className="sales-item-card__meta-value">
                               {formatCurrency(variacaoSelecionada.produto_preco_venda)}
                             </strong>
@@ -441,7 +445,7 @@ export default function PedidoFormPage() {
 
                       <div className="form-grid">
                         <div style={{ gridColumn: "1 / -1" }}>
-                          <label className="form-label">Variacao</label>
+                          <label className="form-label">Variação</label>
                           <select
                             value={item.variacao}
                             onChange={(event) =>
@@ -457,7 +461,7 @@ export default function PedidoFormPage() {
                             ))}
                           </select>
                           <p className="table-cell-meta sales-input-note">
-                            Ao selecionar o item, o preco unitario e preenchido automaticamente com o valor de venda cadastrado.
+                            Ao selecionar o item, o preço unitário é preenchido automaticamente com o valor de venda cadastrado.
                           </p>
                         </div>
 
@@ -474,13 +478,13 @@ export default function PedidoFormPage() {
                           />
                           {possuiSaldoInsuficiente ? (
                             <p className="alert-error sales-inline-error">
-                              Quantidade acima do saldo disponivel.
+                              Quantidade acima do saldo disponível.
                             </p>
                           ) : null}
                         </div>
 
                         <div>
-                          <label className="form-label">Preco unitario</label>
+                          <label className="form-label">Preço unitário</label>
                           <input
                             type="number"
                             min="0.01"
@@ -493,7 +497,7 @@ export default function PedidoFormPage() {
                             required
                           />
                           <p className="table-cell-meta sales-input-note">
-                            Valor sugerido automaticamente. Ajuste apenas se precisar registrar um preco diferente.
+                            Valor sugerido automaticamente. Ajuste apenas se precisar registrar um preço diferente.
                           </p>
                         </div>
 
@@ -511,7 +515,7 @@ export default function PedidoFormPage() {
 
           <aside className="page-card notice-card sales-sidebar">
             <div className="sales-sidebar__header">
-              <span className="sales-eyebrow">Conferencia final</span>
+              <span className="sales-eyebrow">Conferência final</span>
               <h3 className="section-title">Resumo da venda</h3>
               <p className="section-subtitle sales-section__subtitle">
                 Confira os dados essenciais antes de registrar o pedido no sistema.
@@ -522,7 +526,7 @@ export default function PedidoFormPage() {
               <div className="sales-sidebar__panel">
                 <span className="sales-sidebar__label">Cliente</span>
                 <strong className="sales-sidebar__value">
-                  {form.cliente_nome.trim() || "Nao informado"}
+                  {form.cliente_nome.trim() || "Não informado"}
                 </strong>
               </div>
 

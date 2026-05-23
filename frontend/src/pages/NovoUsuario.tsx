@@ -14,6 +14,7 @@ export default function NovoUsuario() {
   const [form, setForm] = useState({
     username: "",
     password: "",
+    tipo: "funcionario",
   });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -35,10 +36,7 @@ export default function NovoUsuario() {
         "/usuarios/",
         {
           method: "POST",
-          body: {
-            ...form,
-            tipo: "funcionario",
-          },
+          body: form,
         },
         "Erro ao cadastrar usuário.",
       );
@@ -81,7 +79,10 @@ export default function NovoUsuario() {
             </div>
             <div>
               <label className="form-label">Perfil</label>
-              <input value="Funcionário" readOnly />
+              <select name="tipo" value={form.tipo} onChange={handleChange}>
+                <option value="funcionario">Funcionário</option>
+                <option value="admin">Administrador</option>
+              </select>
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">Senha</label>
@@ -94,6 +95,10 @@ export default function NovoUsuario() {
               />
             </div>
           </div>
+
+          <p className="form-helper-text">
+            Apenas administradores podem conceder acesso administrativo a outro usuário.
+          </p>
 
           <div className="form-actions">
             <button

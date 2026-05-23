@@ -7,14 +7,14 @@ from .estoque import registrar_movimentacao
 
 def _validar_itens_pedido(itens_data):
     if not itens_data:
-        raise ValidationError({"itens": "Adicione pelo menos um item a venda."})
+        raise ValidationError({"itens": "Adicione pelo menos um item à venda."})
 
     variacoes = set()
     for item in itens_data:
         variacao_id = item["variacao"].pk
         if variacao_id in variacoes:
             raise ValidationError(
-                {"itens": "Nao repita a mesma variacao em mais de uma linha da venda."}
+                {"itens": "Não repita a mesma variação em mais de uma linha da venda."}
             )
         variacoes.add(variacao_id)
 
@@ -41,7 +41,7 @@ def _aplicar_estoque_venda(pedido, itens, usuario=None):
                 tipo=Movimentacao.Tipo.SAIDA,
                 quantidade=item.quantidade,
                 observacao=(
-                    f"Saida automatica da venda {pedido.codigo} - "
+                    f"Saída automática da venda {pedido.codigo} - "
                     f"{item.variacao.produto.nome}"
                 ),
                 usuario=usuario,
@@ -53,7 +53,7 @@ def _aplicar_estoque_venda(pedido, itens, usuario=None):
                         "itens": (
                             "Estoque insuficiente para concluir a venda. "
                             f"{item.variacao.produto.nome} possui "
-                            f"{item.variacao.saldo_atual} unidade(s) disponivel(is) "
+                            f"{item.variacao.saldo_atual} unidade(s) disponível(is) "
                             f"e a venda solicita {item.quantidade}."
                         )
                     }
@@ -68,7 +68,7 @@ def _aplicar_estoque_venda(pedido, itens, usuario=None):
 def salvar_pedido_venda(*, dados_pedido, itens_data, usuario=None, pedido=None):
     if pedido is not None:
         raise ValidationError(
-            {"detail": "As vendas registradas nao podem ser editadas."}
+            {"detail": "As vendas registradas não podem ser editadas."}
         )
 
     _validar_itens_pedido(itens_data)

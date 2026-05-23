@@ -116,7 +116,7 @@ export default function PedidosPage() {
       <div className="sales-page">
         <PageHeader
           title="Vendas"
-          description="Acompanhe o historico comercial, consulte clientes atendidos e monitore o faturamento registrado no sistema."
+          description="Acompanhe o histórico comercial, consulte clientes atendidos e monitore o faturamento registrado no sistema."
           action={(
             <button
               type="button"
@@ -133,16 +133,16 @@ export default function PedidosPage() {
             title="Vendas encontradas"
             value={vendasFiltradas.length}
             tone="blue"
-            caption={busca ? "Resultado filtrado pela busca" : "Base completa de vendas"}
+            caption={busca ? "Resultado filtrado pela busca." : "Base completa de vendas."}
           />
           <SummaryCard
             title="Faturamento"
             value={formatCurrency(faturamentoTotal)}
             tone="green"
-            caption="Somatorio das vendas exibidas"
+            caption="Somatório das vendas exibidas."
           />
           <SummaryCard
-            title="Ticket medio"
+            title="Ticket médio"
             value={formatCurrency(ticketMedio)}
             tone="orange"
             caption={`${itensVendidos} unidades vendidas`}
@@ -155,9 +155,9 @@ export default function PedidosPage() {
           <div className="sales-toolbar__header">
             <div>
               <span className="sales-eyebrow">Consulta comercial</span>
-              <h3 className="section-title">Historico de vendas</h3>
+              <h3 className="section-title">Histórico de vendas</h3>
               <p className="section-subtitle">
-                Busque por codigo da venda ou nome do cliente para encontrar registros com mais rapidez.
+                Busque por código da venda ou nome do cliente para encontrar registros com mais rapidez.
               </p>
             </div>
 
@@ -184,7 +184,7 @@ export default function PedidosPage() {
             </div>
 
             <div className="sales-inline-metric">
-              <span className="sales-inline-metric__label">Ultima venda</span>
+              <span className="sales-inline-metric__label">Última venda</span>
               <strong className="sales-inline-metric__value">
                 {ultimaVenda ? formatDateTime(ultimaVenda.criado_em) : "-"}
               </strong>
@@ -239,7 +239,7 @@ export default function PedidosPage() {
                             </td>
                             <td>
                               <div className="table-cell-primary">{venda.cliente_nome}</div>
-                              <div className="table-cell-meta">Pedido finalizado no caixa</div>
+                              <div className="table-cell-meta">Pedido finalizado no caixa.</div>
                             </td>
                             <td>
                               <span className="badge badge-success">Finalizada</span>

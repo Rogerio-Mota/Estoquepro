@@ -100,7 +100,7 @@ function loadImage(source: string | Blob): Promise<HTMLImageElement> {
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
-      reject(new Error("Nao foi possivel processar a logo enviada."));
+      reject(new Error("Não foi possível processar a logo enviada."));
     };
 
     image.src = objectUrl || String(source);
@@ -264,7 +264,7 @@ export async function extractPaletteFromImage(source: string | Blob) {
   const context = canvas.getContext("2d", { willReadFrequently: true });
 
   if (!context) {
-    throw new Error("Nao foi possivel ler a imagem da logo.");
+    throw new Error("Não foi possível ler a imagem da logo.");
   }
 
   const maxDimension = 96;

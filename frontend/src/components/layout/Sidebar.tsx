@@ -38,7 +38,7 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
   { to: "/pedidos", label: "Vendas", icon: "orders", matchPaths: ["/pedidos", "/novo-pedido"] },
   { to: "/produtos", label: "Produtos", icon: "products", matchPaths: ["/produtos", "/novo-produto", "/editar-produto"] },
   { to: "/estoque-baixo", label: "Estoque baixo", icon: "stock", matchPaths: ["/estoque-baixo"] },
-  { to: "/movimentacoes", label: "Movimentacoes", icon: "movement", matchPaths: ["/movimentacoes", "/nova-movimentacao"] },
+  { to: "/movimentacoes", label: "Movimentações", icon: "movement", matchPaths: ["/movimentacoes", "/nova-movimentacao"] },
 ];
 
 const SECONDARY_MENU_ITEMS: MenuItem[] = [
@@ -52,10 +52,10 @@ function getRoleLabel(tipo?: string | null) {
   }
 
   if (tipo === "funcionario") {
-    return "Funcionario";
+    return "Funcionário";
   }
 
-  return "Usuario";
+  return "Usuário";
 }
 
 function isItemActive(pathname: string, item: MenuItem) {
@@ -191,13 +191,14 @@ export default function Sidebar({
   const { logout, user } = useAuth();
   const { config } = useSystemConfig();
   const location = useLocation();
+  const headerRef = useRef<HTMLElement | null>(null);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const secondaryMenuItems: MenuItem[] = user?.tipo === "admin"
     ? [
         ...SECONDARY_MENU_ITEMS,
-        { to: "/usuarios", label: "Usuarios", icon: "users", matchPaths: ["/usuarios", "/novo-usuario", "/editar-usuario"] },
-        { to: "/configuracoes", label: "Configuracoes", icon: "settings", matchPaths: ["/configuracoes"] },
+        { to: "/usuarios", label: "Usuários", icon: "users", matchPaths: ["/usuarios", "/novo-usuario", "/editar-usuario"] },
+        { to: "/configuracoes", label: "Configurações", icon: "settings", matchPaths: ["/configuracoes"] },
       ]
     : SECONDARY_MENU_ITEMS;
   const brandInitials = getBrandInitials(config.nome_empresa);
@@ -231,6 +232,33 @@ export default function Sidebar({
     };
   }, [moreMenuOpen]);
 
+  useEffect(() => {
+    const headerElement = headerRef.current;
+    if (!headerElement) {
+      return undefined;
+    }
+
+    function atualizarOffset() {
+      const alturaHeader = Math.ceil(headerElement.getBoundingClientRect().height);
+      const offset = Math.max(alturaHeader + 12, 112);
+      document.documentElement.style.setProperty("--app-header-offset", `${offset}px`);
+    }
+
+    atualizarOffset();
+
+    const resizeObserver = new ResizeObserver(() => {
+      atualizarOffset();
+    });
+    resizeObserver.observe(headerElement);
+
+    window.addEventListener("resize", atualizarOffset);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", atualizarOffset);
+    };
+  }, [isMobile, moreMenuOpen, showMobilePanel]);
+
   return (
     <>
       {showMobilePanel ? (
@@ -242,7 +270,7 @@ export default function Sidebar({
         />
       ) : null}
 
-      <header className="site-header">
+      <header className="site-header" ref={headerRef}>
         <div className="page-card site-header__bar">
           <div className="site-header__top">
             <NavLink
@@ -286,7 +314,7 @@ export default function Sidebar({
             ) : (
               <div className="site-header__actions">
                 <div className="site-user">
-                  <span className="site-user__name">{user?.username || "Usuario"}</span>
+                  <span className="site-user__name">{user?.username || "Usuário"}</span>
                   <span className="site-user__role">{getRoleLabel(user?.tipo)}</span>
                 </div>
 
@@ -361,29 +389,41 @@ export default function Sidebar({
                     onClick={() => setMoreMenuOpen((current) => !current)}
                     aria-expanded={moreMenuOpen}
                     aria-haspopup="menu"
-                    aria-label="Abrir mais opcoes do menu"
+                    aria-label={moreMenuOpen ? "Fechar atalhos do menu" : "Abrir atalhos do menu"}
+                    title="Atalhos"
                   >
-                    <MenuIcon name="more" />
-                    <span className="site-nav__label">Mais</span>
+                    <span className="site-nav__more-toggle-badge">
+                      <MenuIcon name="more" className="site-nav__icon" />
+                    </span>
+                    <span className="site-nav__more-toggle-label">Mais</span>
                     <MenuIcon name="chevron" className="site-nav__icon site-nav__icon--chevron" />
                   </button>
 
                   {moreMenuOpen ? (
                     <div className="site-nav__more-menu page-card" role="menu">
-                      {secondaryMenuItems.map((item) => (
-                        <NavLink
-                          key={item.to}
-                          to={item.to}
-                          className={() =>
-                            `site-nav__more-link ${isItemActive(location.pathname, item) ? "site-nav__more-link--active" : ""}`
-                          }
-                          onClick={() => setMoreMenuOpen(false)}
-                          role="menuitem"
-                        >
-                          <MenuIcon name={item.icon} />
-                          <span className="site-nav__label">{item.label}</span>
-                        </NavLink>
-                      ))}
+                      <div className="site-nav__more-menu-header">
+                        <span className="site-nav__more-menu-eyebrow">Atalhos</span>
+                        <strong className="site-nav__more-menu-title">Ferramentas do sistema</strong>
+                      </div>
+
+                      <div className="site-nav__more-menu-grid">
+                        {secondaryMenuItems.map((item) => (
+                          <NavLink
+                            key={item.to}
+                            to={item.to}
+                            className={() =>
+                              `site-nav__more-link ${isItemActive(location.pathname, item) ? "site-nav__more-link--active" : ""}`
+                            }
+                            onClick={() => setMoreMenuOpen(false)}
+                            role="menuitem"
+                          >
+                            <span className="site-nav__more-link-icon">
+                              <MenuIcon name={item.icon} className="site-nav__icon" />
+                            </span>
+                            <span className="site-nav__more-link-label">{item.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -393,7 +433,7 @@ export default function Sidebar({
             {isMobile ? (
               <div className="site-header__actions">
                 <div className="site-user">
-                  <span className="site-user__name">{user?.username || "Usuario"}</span>
+                  <span className="site-user__name">{user?.username || "Usuário"}</span>
                   <span className="site-user__role">{getRoleLabel(user?.tipo)}</span>
                 </div>
 

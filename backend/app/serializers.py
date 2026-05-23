@@ -47,15 +47,19 @@ def _usuario_tipo(instance):
 class UsuarioSerializer(serializers.ModelSerializer):
     tipo = serializers.ChoiceField(choices=PerfilUsuario.Tipo.choices, source="perfil.tipo")
     password = serializers.CharField(write_only=True, required=False)
+    administrador_principal = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "username", "password", "tipo"]
+        fields = ["id", "username", "password", "tipo", "administrador_principal"]
+
+    def get_administrador_principal(self, obj):
+        return bool(obj.is_superuser)
 
     def validate(self, attrs):
         if self.instance is None and not attrs.get("password"):
             raise serializers.ValidationError(
-                {"password": "A senha e obrigatoria para criar um usuario."}
+                {"password": "A senha é obrigatória para criar um usuário."}
             )
 
         perfil_data = attrs.get("perfil", {})
@@ -67,15 +71,18 @@ class UsuarioSerializer(serializers.ModelSerializer):
         )
         instancia_eh_admin = bool(self.instance and _usuario_tipo(self.instance) == PerfilUsuario.Tipo.ADMIN)
 
-        if tipo_desejado == PerfilUsuario.Tipo.ADMIN:
-            admins_existentes = _admins_queryset()
-            if instancia_eh_admin:
-                admins_existentes = admins_existentes.exclude(pk=self.instance.pk)
-
-            if admins_existentes.exists():
-                raise serializers.ValidationError(
-                    {"tipo": "O sistema permite apenas um administrador principal."}
-                )
+        if (
+            self.instance is not None
+            and self.instance.is_superuser
+            and tipo_desejado != PerfilUsuario.Tipo.ADMIN
+        ):
+            raise serializers.ValidationError(
+                {
+                    "tipo": (
+                        "Use o comando de manutenção para transferir o administrador principal."
+                    )
+                }
+            )
 
         if (
             self.instance is not None
@@ -84,7 +91,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             and not _admins_queryset().exclude(pk=self.instance.pk).exists()
         ):
             raise serializers.ValidationError(
-                {"tipo": "O sistema precisa manter um administrador principal."}
+                {"tipo": "O sistema precisa manter pelo menos um administrador ativo."}
             )
 
         return attrs
@@ -113,7 +120,13 @@ class UsuarioSerializer(serializers.ModelSerializer):
         if perfil_data:
             PerfilUsuario.objects.update_or_create(
                 user=instance,
-                defaults={"tipo": perfil_data.get("tipo", _usuario_tipo(instance))},
+                defaults={
+                    "tipo": (
+                        PerfilUsuario.Tipo.ADMIN
+                        if instance.is_superuser
+                        else perfil_data.get("tipo", _usuario_tipo(instance))
+                    )
+                },
             )
 
         return instance
@@ -124,39 +137,19 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return data
 
 
-class PrimeiroAcessoSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=150)
-    password = serializers.CharField(write_only=True, min_length=6)
-    password_confirmacao = serializers.CharField(write_only=True, min_length=6)
-
-    def validate_username(self, value):
-        username = str(value or "").strip()
-        if not username:
-            raise serializers.ValidationError("Informe um nome de usuario.")
-
-        if User.objects.filter(username__iexact=username).exists():
-            raise serializers.ValidationError("Ja existe um usuario com esse nome.")
-
-        return username
-
-    def validate(self, attrs):
-        if attrs["password"] != attrs["password_confirmacao"]:
-            raise serializers.ValidationError(
-                {"password_confirmacao": "As senhas informadas nao coincidem."}
-            )
-
-        return attrs
-
-
 class UsuarioLogadoSerializer(serializers.ModelSerializer):
     tipo = serializers.SerializerMethodField()
+    administrador_principal = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "tipo"]
+        fields = ["id", "username", "tipo", "administrador_principal"]
 
     def get_tipo(self, obj):
         return _usuario_tipo(obj)
+
+    def get_administrador_principal(self, obj):
+        return bool(obj.is_superuser)
 
 
 class FornecedorSerializer(serializers.ModelSerializer):
@@ -217,7 +210,7 @@ class VariacaoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "estoque_inicial": (
-                        "Use uma movimentacao para ajustar o estoque de uma variacao existente."
+                        "Use uma movimentação para ajustar o estoque de uma variação existente."
                     )
                 }
             )
@@ -239,7 +232,7 @@ class VariacaoSerializer(serializers.ModelSerializer):
         return criar_variacao_com_estoque_inicial(
             produto=produto,
             estoque_inicial=estoque_inicial,
-            observacao=f"Entrada inicial automatica do cadastro - {produto.nome}",
+            observacao=f"Entrada inicial automática do cadastro - {produto.nome}",
             usuario=usuario,
             **validated_data,
         )
@@ -424,7 +417,7 @@ class PedidoVendaSerializer(serializers.ModelSerializer):
         itens = attrs.get("itens")
         if not itens:
             raise serializers.ValidationError(
-                {"itens": "Adicione pelo menos um item a venda."}
+                {"itens": "Adicione pelo menos um item à venda."}
             )
 
         instance = PedidoVenda()

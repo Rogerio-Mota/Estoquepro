@@ -12,7 +12,11 @@ import { authJsonRequest, extractCollection } from "@/services/api";
 
 const ITENS_POR_PAGINA = 6;
 
-function getTipoLabel(tipo) {
+function getTipoLabel(tipo, administradorPrincipal = false) {
+  if (tipo === "admin" && administradorPrincipal) {
+    return "Administrador principal";
+  }
+
   if (tipo === "admin") {
     return "Administrador";
   }
@@ -161,7 +165,10 @@ export default function UsuariosPage() {
                             : "badge-warning"
                         }`}
                       >
-                        {getTipoLabel(usuario.tipo)}
+                        {getTipoLabel(
+                          usuario.tipo,
+                          usuario.administrador_principal,
+                        )}
                       </span>
                     </td>
                     <td>
@@ -173,7 +180,9 @@ export default function UsuariosPage() {
                         >
                           Editar
                         </button>
-                        {usuario.tipo === "admin" ? (
+                        {user?.id === usuario.id ? (
+                          <span className="table-inline-note">Sessao atual</span>
+                        ) : usuario.administrador_principal ? (
                           <span className="table-inline-note">Principal</span>
                         ) : (
                           <button

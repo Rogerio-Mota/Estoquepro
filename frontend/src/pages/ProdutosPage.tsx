@@ -6,11 +6,19 @@ import EmptyState from "@/components/feedback/EmptyState";
 import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/layout/PageHeader";
 import PaginationControls from "@/components/navigation/PaginationControls";
+import VariationsPreview from "@/components/products/VariationsPreview";
+import { matchesVariationSearch } from "@/components/products/variationUtils";
 import { getCategoryLabel } from "@/constants/productOptions";
 import useAuth from "@/hooks/useAuth";
 import { authJsonRequest, extractCollection } from "@/services/api";
 
 const ITENS_POR_PAGINA = 5;
+
+function buildProductMeta(produto) {
+  return [produto.marca, produto.sku ? `SKU ${produto.sku}` : null]
+    .filter(Boolean)
+    .join(" | ") || "-";
+}
 
 export default function ProdutosPage() {
   const { user } = useAuth();
@@ -46,7 +54,8 @@ export default function ProdutosPage() {
       const combinaBusca =
         produto.nome?.toLowerCase().includes(termo) ||
         produto.marca?.toLowerCase().includes(termo) ||
-        produto.sku?.toLowerCase().includes(termo);
+        produto.sku?.toLowerCase().includes(termo) ||
+        matchesVariationSearch(produto.variacoes, termo);
       const combinaCategoria =
         !categoriaFiltro || produto.categoria === categoriaFiltro;
       const combinaStatus = !statusFiltro || produto.status_estoque === statusFiltro;
@@ -174,7 +183,12 @@ export default function ProdutosPage() {
                   <tr key={produto.id}>
                     <td>
                       <div className="table-cell-primary">{produto.nome}</div>
-                      <div className="table-cell-meta">{produto.marca || produto.sku}</div>
+                      <div className="table-cell-meta">{buildProductMeta(produto)}</div>
+                      <VariationsPreview
+                        variacoes={produto.variacoes}
+                        maxItems={3}
+                        emptyLabel="Sem variações complementares."
+                      />
                     </td>
                     <td>{getCategoryLabel(produto.categoria)}</td>
                     <td>

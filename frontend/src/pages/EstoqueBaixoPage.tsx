@@ -5,6 +5,8 @@ import EmptyState from "@/components/feedback/EmptyState";
 import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/layout/PageHeader";
 import PaginationControls from "@/components/navigation/PaginationControls";
+import VariationsPreview from "@/components/products/VariationsPreview";
+import { matchesVariationSearch } from "@/components/products/variationUtils";
 import { getCategoryLabel } from "@/constants/productOptions";
 import { authJsonRequest, extractCollection } from "@/services/api";
 
@@ -45,7 +47,8 @@ export default function EstoqueBaixoPage() {
       const combinaBusca =
         produto.nome?.toLowerCase().includes(termo) ||
         produto.marca?.toLowerCase().includes(termo) ||
-        produto.sku?.toLowerCase().includes(termo);
+        produto.sku?.toLowerCase().includes(termo) ||
+        matchesVariationSearch(produto.variacoes, termo);
       const combinaCategoria =
         !categoriaFiltro || produto.categoria === categoriaFiltro;
 
@@ -130,6 +133,12 @@ export default function EstoqueBaixoPage() {
                       <div className="table-cell-meta">
                         {getCategoryLabel(produto.categoria)}
                       </div>
+                      <VariationsPreview
+                        variacoes={produto.variacoes}
+                        maxItems={2}
+                        showSaldo
+                        emptyLabel="Sem variações complementares."
+                      />
                     </td>
                     <td>{produto.sku}</td>
                     <td>{produto.estoque_total}</td>

@@ -62,7 +62,7 @@ function readFileAsDataUrl(file) {
     const reader = new FileReader();
 
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Nao foi possivel ler a logo informada."));
+    reader.onerror = () => reject(new Error("Não foi possível ler a logo informada."));
     reader.readAsDataURL(file);
   });
 }

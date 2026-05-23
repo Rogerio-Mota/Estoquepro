@@ -17,6 +17,7 @@ export default function EditarUsuario() {
     password: "",
     tipo: "funcionario",
   });
+  const [administradorPrincipal, setAdministradorPrincipal] = useState(false);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -30,6 +31,7 @@ export default function EditarUsuario() {
           password: "",
           tipo: data.tipo || "funcionario",
         });
+        setAdministradorPrincipal(Boolean(data.administrador_principal));
       } catch (error) {
         setErro(error.message || "Erro ao carregar usuário.");
         toast.error(error.message || "Erro ao carregar usuário.");
@@ -114,10 +116,14 @@ export default function EditarUsuario() {
             </div>
             <div>
               <label className="form-label">Perfil</label>
-              <input
-                value={form.tipo === "admin" ? "Administrador principal" : "Funcionário"}
-                readOnly
-              />
+              {administradorPrincipal ? (
+                <input value="Administrador principal" readOnly />
+              ) : (
+                <select name="tipo" value={form.tipo} onChange={handleChange}>
+                  <option value="funcionario">Funcionário</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              )}
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">Nova senha</label>
@@ -129,6 +135,12 @@ export default function EditarUsuario() {
               />
             </div>
           </div>
+
+          {administradorPrincipal ? (
+            <p className="form-helper-text">
+              O administrador principal deve ser transferido pelo comando de manutenção.
+            </p>
+          ) : null}
 
           <div className="form-actions">
             <button
