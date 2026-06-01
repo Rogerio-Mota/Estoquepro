@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: estoquepro-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    autoDeploy: true
+    buildCommand: bash build.sh
+    startCommand: bash start.sh
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: DJANGO_DEBUG
+        value: false
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: DJANGO_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: DJANGO_SERVE_STATIC
+        value: true
+      - key: DJANGO_SERVE_MEDIA
+        value: true
+      - key: DATABASE_URL
+        sync: false
+      - key: DJANGO_ADMIN_USERNAME
+        sync: false
+      - key: DJANGO_ADMIN_PASSWORD
+        sync: false

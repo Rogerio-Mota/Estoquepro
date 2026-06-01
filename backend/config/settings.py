@@ -123,6 +123,13 @@ CORS_ALLOWED_ORIGINS = _get_csv_env(
     "DJANGO_CORS_ALLOWED_ORIGINS",
     "http://127.0.0.1:5173,http://localhost:5173",
 )
+CSRF_TRUSTED_ORIGINS = _get_csv_env("DJANGO_CSRF_TRUSTED_ORIGINS", "")
+SERVE_STATIC = DEBUG or _get_bool_env("DJANGO_SERVE_STATIC", False)
+SERVE_MEDIA = DEBUG or _get_bool_env("DJANGO_SERVE_MEDIA", False)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -140,6 +147,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -189,9 +197,18 @@ TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
