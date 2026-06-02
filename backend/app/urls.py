@@ -6,7 +6,6 @@ from .views import (
     FornecedorViewSet,
     MovimentacaoViewSet,
     PedidoVendaViewSet,
-    PrimeiroAcessoView,
     ProdutoViewSet,
     RelatorioVendasView,
     SaidaEstoqueView,
@@ -24,7 +23,6 @@ router.register(r"pedidos", PedidoVendaViewSet)
 router.register(r"usuarios", UsuarioViewSet)
 
 urlpatterns = [
-    path("primeiro-acesso/", PrimeiroAcessoView.as_view(), name="primeiro-acesso"),
     path("entrada-estoque/", EntradaEstoqueView.as_view(), name="entrada-estoque"),
     path("saida-estoque/", SaidaEstoqueView.as_view(), name="saida-estoque"),
     path("relatorios/vendas/", RelatorioVendasView.as_view(), name="relatorio-vendas"),
