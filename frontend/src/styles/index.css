@@ -2066,6 +2066,13 @@ textarea:focus {
   min-width: 0;
 }
 
+.settings-page .page-card::before,
+.settings-page .highlight-panel::before,
+.settings-page .metric-card::before,
+.settings-page .info-card::before {
+  display: none;
+}
+
 .sales-page {
   display: grid;
   gap: 20px;
@@ -2826,6 +2833,7 @@ textarea:focus {
     width: 64px;
   }
 
+  .site-header__bar::before,
   .page-card::before,
   .highlight-panel::before,
   .metric-card::before,
