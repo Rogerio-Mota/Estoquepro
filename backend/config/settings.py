@@ -40,6 +40,19 @@ def _get_csv_env(name, default=""):
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
+def _dedupe_items(values):
+    deduped = []
+    seen = set()
+
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        deduped.append(value)
+
+    return deduped
+
+
 def _get_required_env(name):
     value = os.getenv(name, "").strip()
     if not value:
@@ -118,18 +131,48 @@ if SECRET_KEY in {
     )
 
 DEBUG = _get_bool_env("DJANGO_DEBUG", False)
-ALLOWED_HOSTS = _get_csv_env("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+RAILWAY_PUBLIC_ORIGIN = (
+    f"https://{RAILWAY_PUBLIC_DOMAIN}" if RAILWAY_PUBLIC_DOMAIN else ""
+)
+ALLOWED_HOSTS = _dedupe_items(
+    [
+        *_get_csv_env("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost"),
+        RAILWAY_PUBLIC_DOMAIN,
+    ]
+)
 CORS_ALLOWED_ORIGINS = _get_csv_env(
     "DJANGO_CORS_ALLOWED_ORIGINS",
     "http://127.0.0.1:5173,http://localhost:5173",
 )
-CSRF_TRUSTED_ORIGINS = _get_csv_env("DJANGO_CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = _dedupe_items(
+    [
+        *_get_csv_env("DJANGO_CSRF_TRUSTED_ORIGINS", ""),
+        RAILWAY_PUBLIC_ORIGIN,
+    ]
+)
 SERVE_STATIC = DEBUG or _get_bool_env("DJANGO_SERVE_STATIC", False)
 SERVE_MEDIA = DEBUG or _get_bool_env("DJANGO_SERVE_MEDIA", False)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
+SECURE_SSL_REDIRECT = not DEBUG and _get_bool_env("DJANGO_SECURE_SSL_REDIRECT", True)
+SECURE_HSTS_SECONDS = 0 if DEBUG else int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "3600"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+    not DEBUG and _get_bool_env("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+)
+SECURE_HSTS_PRELOAD = (
+    not DEBUG and _get_bool_env("DJANGO_SECURE_HSTS_PRELOAD", False)
+)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
 SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "Lax"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
