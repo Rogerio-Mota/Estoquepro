@@ -2050,6 +2050,22 @@ textarea:focus {
   gap: 12px;
 }
 
+.settings-page {
+  min-width: 0;
+}
+
+.settings-page input[type="file"] {
+  max-width: 100%;
+  width: 100%;
+}
+
+.settings-page .settings-preview__brand > div,
+.settings-page .settings-preview__palette-item > div,
+.settings-page .settings-preview__cards,
+.settings-page .settings-status-grid {
+  min-width: 0;
+}
+
 .sales-page {
   display: grid;
   gap: 20px;
@@ -2808,5 +2824,45 @@ textarea:focus {
   .login-page__logo {
     height: 64px;
     width: 64px;
+  }
+
+  .page-card::before,
+  .highlight-panel::before,
+  .metric-card::before,
+  .info-card::before {
+    display: none;
+  }
+
+  .settings-page .section-header-inline,
+  .settings-page .settings-preview__brand,
+  .settings-page .settings-preview__palette-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-page .settings-preview__brand-mark {
+    height: 64px;
+    width: 64px;
+  }
+
+  .settings-page .color-control__inputs {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .settings-page .settings-status-grid,
+  .settings-page .settings-preview__cards {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-page .settings-preview__cta,
+  .settings-page .form-actions {
+    flex-direction: column;
+  }
+
+  .settings-page .settings-preview__cta .button-secondary,
+  .settings-page .form-actions .button-primary,
+  .settings-page .form-actions .button-secondary {
+    justify-content: center;
+    width: 100%;
   }
 }

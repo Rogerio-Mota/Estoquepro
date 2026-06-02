@@ -184,7 +184,7 @@ export default function ConfiguracoesSistemaPage() {
 
   return (
     <Layout title="Configurações">
-      <div className="form-shell form-shell--wide">
+      <div className="form-shell form-shell--wide settings-page">
         <PageHeader
           title="Configurações do sistema"
           description="Organize o nome exibido, a descrição, a logo e a paleta visual usada pelo frontend."
