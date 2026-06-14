@@ -7,6 +7,7 @@ import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/layout/PageHeader";
 import useAuth from "@/hooks/useAuth";
 import { authJsonRequest } from "@/services/api";
+import { formatPhoneInput, PHONE_INPUT_MAX_LENGTH } from "@/utils/phone";
 
 export default function EditarFornecedor() {
   const { user } = useAuth();
@@ -31,7 +32,7 @@ export default function EditarFornecedor() {
 
         setForm({
           nome: data.nome || "",
-          contato: data.contato || "",
+          contato: formatPhoneInput(data.contato || ""),
           cidade: data.cidade || "",
         });
       } catch (error) {
@@ -46,9 +47,14 @@ export default function EditarFornecedor() {
   }, [id, user]);
 
   function handleChange(event) {
+    const nextValue =
+      event.target.name === "contato"
+        ? formatPhoneInput(event.target.value)
+        : event.target.value;
+
     setForm((prevState) => ({
       ...prevState,
-      [event.target.name]: event.target.value,
+      [event.target.name]: nextValue,
     }));
   }
 
@@ -107,10 +113,17 @@ export default function EditarFornecedor() {
               <label className="form-label">Contato</label>
               <input
                 name="contato"
+                type="tel"
+                inputMode="numeric"
+                placeholder="(99) 99999-9999"
+                maxLength={PHONE_INPUT_MAX_LENGTH}
                 value={form.contato}
                 onChange={handleChange}
                 required
               />
+              <p className="form-helper-text">
+                Use o formato `(99) 99999-9999`.
+              </p>
             </div>
             <div>
               <label className="form-label">Cidade</label>

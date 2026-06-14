@@ -7,6 +7,7 @@ import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/layout/PageHeader";
 import useAuth from "@/hooks/useAuth";
 import { authJsonRequest } from "@/services/api";
+import { formatPhoneInput, PHONE_INPUT_MAX_LENGTH } from "@/utils/phone";
 
 export default function NovoFornecedor() {
   const { user } = useAuth();
@@ -20,9 +21,14 @@ export default function NovoFornecedor() {
   const [salvando, setSalvando] = useState(false);
 
   function handleChange(event) {
+    const nextValue =
+      event.target.name === "contato"
+        ? formatPhoneInput(event.target.value)
+        : event.target.value;
+
     setForm((prevState) => ({
       ...prevState,
-      [event.target.name]: event.target.value,
+      [event.target.name]: nextValue,
     }));
   }
 
@@ -81,10 +87,17 @@ export default function NovoFornecedor() {
               <label className="form-label">Contato</label>
               <input
                 name="contato"
+                type="tel"
+                inputMode="numeric"
+                placeholder="(99) 99999-9999"
+                maxLength={PHONE_INPUT_MAX_LENGTH}
                 value={form.contato}
                 onChange={handleChange}
                 required
               />
+              <p className="form-helper-text">
+                Use o formato `(99) 99999-9999`.
+              </p>
             </div>
             <div>
               <label className="form-label">Cidade</label>

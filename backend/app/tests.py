@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -88,69 +88,6 @@ class RegistroMovimentacaoTests(TestCase):
         self.assertEqual(movimentacao.responsavel, usuario)
 
 
-class PrimeiroAcessoTests(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-
-    def test_status_indica_quando_primeiro_acesso_publico_esta_desabilitado(self):
-        status_response = self.client.get("/api/primeiro-acesso/")
-
-        self.assertEqual(status_response.status_code, 200)
-        self.assertTrue(status_response.data["primeiro_acesso_pendente"])
-        self.assertFalse(status_response.data["primeiro_acesso_publico_habilitado"])
-
-    def test_primeiro_acesso_retorna_403_quando_fluxo_publico_esta_desabilitado(self):
-        response = self.client.post(
-            "/api/primeiro-acesso/",
-            {
-                "username": "admininicial",
-                "password": "123456",
-                "password_confirmacao": "123456",
-            },
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 403)
-        self.assertIn("detail", response.data)
-
-    @override_settings(ENABLE_PUBLIC_FIRST_ACCESS=True)
-    def test_primeiro_acesso_cria_administrador_inicial(self):
-        status_response = self.client.get("/api/primeiro-acesso/")
-        self.assertEqual(status_response.status_code, 200)
-        self.assertTrue(status_response.data["primeiro_acesso_pendente"])
-        self.assertTrue(status_response.data["primeiro_acesso_publico_habilitado"])
-
-        create_response = self.client.post(
-            "/api/primeiro-acesso/",
-            {
-                "username": "admininicial",
-                "password": "123456",
-                "password_confirmacao": "123456",
-            },
-            format="json",
-        )
-
-        self.assertEqual(create_response.status_code, 201)
-        self.assertEqual(User.objects.get(username="admininicial").perfil.tipo, PerfilUsuario.Tipo.ADMIN)
-
-    @override_settings(ENABLE_PUBLIC_FIRST_ACCESS=True)
-    def test_primeiro_acesso_bloqueia_segunda_criacao(self):
-        criar_admin("root")
-
-        response = self.client.post(
-            "/api/primeiro-acesso/",
-            {
-                "username": "admin2",
-                "password": "123456",
-                "password_confirmacao": "123456",
-            },
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("detail", response.data)
-
-
 class ConfigurarAdministradorPrincipalCommandTests(TestCase):
     def test_comando_cria_administrador_principal(self):
         call_command(
@@ -206,9 +143,44 @@ class ConfigurarAdministradorPrincipalCommandTests(TestCase):
         self.assertEqual(novo_admin.perfil.tipo, PerfilUsuario.Tipo.ADMIN)
 
 
+class GarantirAdministradorInicialCommandTests(TestCase):
+    def test_comando_cria_admin_quando_ainda_nao_existe_um(self):
+        call_command(
+            "garantir_admin_inicial",
+            "--username",
+            "adminrender",
+            "--password",
+            "123456",
+        )
+
+        user = User.objects.get(username="adminrender")
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertEqual(user.perfil.tipo, PerfilUsuario.Tipo.ADMIN)
+
+    def test_comando_nao_falha_quando_ja_existe_admin(self):
+        criar_admin("adminexistente")
+
+        call_command(
+            "garantir_admin_inicial",
+            "--username",
+            "adminrender",
+            "--password",
+            "123456",
+        )
+
+        self.assertFalse(User.objects.filter(username="adminrender").exists())
+
+
 class UsuarioLogadoTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+
+    def test_healthcheck_publico_retorna_status_ok(self):
+        response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {"status": "ok"})
 
     def test_superusuario_retorna_tipo_admin_no_endpoint_de_sessao(self):
         superuser = User.objects.create_superuser(
@@ -224,13 +196,13 @@ class UsuarioLogadoTests(TestCase):
         self.assertEqual(response.data["tipo"], PerfilUsuario.Tipo.ADMIN)
 
 
-class UsuarioAdminUnicoTests(TestCase):
+class UsuarioAdminTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.admin = criar_admin()
         self.client.force_authenticate(user=self.admin)
 
-    def test_admin_nao_pode_criar_segundo_administrador(self):
+    def test_admin_pode_criar_outro_administrador(self):
         response = self.client.post(
             "/api/usuarios/",
             {
@@ -241,8 +213,10 @@ class UsuarioAdminUnicoTests(TestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("tipo", response.data)
+        self.assertEqual(response.status_code, 201)
+        usuario = User.objects.get(username="admin2")
+        self.assertEqual(usuario.perfil.tipo, PerfilUsuario.Tipo.ADMIN)
+        self.assertFalse(usuario.is_superuser)
 
     def test_admin_pode_criar_funcionario(self):
         response = self.client.post(
@@ -258,7 +232,23 @@ class UsuarioAdminUnicoTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(User.objects.get(username="funcionario1").perfil.tipo, PerfilUsuario.Tipo.FUNCIONARIO)
 
-    def test_sistema_mantem_um_administrador_principal(self):
+    def test_funcionario_nao_pode_gerenciar_usuarios(self):
+        funcionario = User.objects.create_user(username="funcionario", password="123456")
+        self.client.force_authenticate(user=funcionario)
+
+        response = self.client.post(
+            "/api/usuarios/",
+            {
+                "username": "admin3",
+                "password": "123456",
+                "tipo": "admin",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_sistema_mantem_pelo_menos_um_administrador(self):
         response = self.client.put(
             f"/api/usuarios/{self.admin.id}/",
             {
@@ -273,6 +263,40 @@ class UsuarioAdminUnicoTests(TestCase):
 
     def test_nao_permite_excluir_o_unico_admin(self):
         response = self.client.delete(f"/api/usuarios/{self.admin.id}/")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.data)
+
+    def test_administrador_principal_nao_pode_ser_rebaixado_pela_api(self):
+        principal = User.objects.create_superuser(
+            username="principal",
+            email="principal@example.com",
+            password="123456",
+        )
+        self.client.force_authenticate(user=principal)
+
+        response = self.client.put(
+            f"/api/usuarios/{principal.id}/",
+            {
+                "username": principal.username,
+                "tipo": "funcionario",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("tipo", response.data)
+
+    def test_administrador_principal_nao_pode_ser_excluido_pela_api(self):
+        principal = User.objects.create_superuser(
+            username="principal2",
+            email="principal2@example.com",
+            password="123456",
+        )
+        criar_admin("adminapoio")
+        self.client.force_authenticate(user=principal)
+
+        response = self.client.delete(f"/api/usuarios/{principal.id}/")
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("detail", response.data)
@@ -528,6 +552,55 @@ class VendaTests(TestCase):
         self.assertEqual(update_response.status_code, 405)
 
 
+class ExclusaoProtegidaTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = criar_admin("adminexclusao")
+        self.client.force_authenticate(user=self.admin)
+
+        self.produto = Produto.objects.create(
+            nome="Camisa Premium",
+            categoria=Produto.Categoria.ROUPA,
+            subcategoria=Produto.Subcategoria.CAMISA,
+            marca="Marca Lux",
+            sku="CAM-500",
+            preco_custo="45.00",
+            preco_venda="89.90",
+            estoque_minimo=1,
+        )
+        self.variacao = Variacao.objects.create(
+            produto=self.produto,
+            cor="Azul",
+            tamanho=Variacao.Tamanho.M,
+            saldo_atual=3,
+        )
+        self.venda = PedidoVenda.objects.create(
+            cliente_nome="Cliente fiel",
+            status=PedidoVenda.Status.FINALIZADO,
+            criado_por=self.admin,
+        )
+        PedidoVendaItem.objects.create(
+            pedido=self.venda,
+            variacao=self.variacao,
+            quantidade=1,
+            preco_unitario="89.90",
+        )
+
+    def test_produto_vendido_retorna_erro_json_ao_excluir(self):
+        response = self.client.delete(f"/api/produtos/{self.produto.id}/")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("historico de vendas", str(response.data).lower())
+        self.assertTrue(Produto.objects.filter(pk=self.produto.pk).exists())
+
+    def test_variacao_vendida_retorna_erro_json_ao_excluir(self):
+        response = self.client.delete(f"/api/variacoes/{self.variacao.id}/")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("historico de vendas", str(response.data).lower())
+        self.assertTrue(Variacao.objects.filter(pk=self.variacao.pk).exists())
+
+
 class RelatoriosTests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -607,3 +680,15 @@ class RelatoriosTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(len(response.data), 2)
+
+    def test_relatorio_vendas_com_periodo_invalido_retorna_400_json(self):
+        response = self.client.get("/api/relatorios/vendas/?periodo=invalido")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("periodo", str(response.data).lower())
+
+    def test_movimentacoes_com_periodo_invalido_retorna_400_json(self):
+        response = self.client.get("/api/movimentacoes/?periodo=invalido")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("periodo", str(response.data).lower())

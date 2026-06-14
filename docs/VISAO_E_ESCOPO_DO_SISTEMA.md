@@ -13,7 +13,7 @@
 
 O `EstoquePro` e um sistema web interno para gestao de estoque e vendas, desenhado para apoiar operacoes de varejo que precisam controlar catalogo, variacoes, movimentacoes, fornecedores, usuarios e vendas em um unico ambiente.
 
-Na versao atual, o sistema atende o ciclo operacional essencial: primeiro acesso, autenticacao, consulta do painel, cadastro e manutencao de produtos, controle de variacoes, entradas e saidas de estoque, vendas com baixa automatica, alertas de estoque baixo, relatorios resumidos e gestao de usuarios e fornecedores.
+Na versao atual, o sistema atende o ciclo operacional essencial: provisionamento inicial do administrador pela equipe, autenticacao, consulta do painel, cadastro e manutencao de produtos, controle de variacoes, entradas e saidas de estoque, vendas com baixa automatica, alertas de estoque baixo, relatorios resumidos e gestao de usuarios e fornecedores.
 
 Este documento consolida a visao do produto e define o escopo real entregue pelo repositorio analisado em `05/05/2026`. Ele deve ser usado como referencia executiva para alinhamento entre negocio, desenvolvimento, validacao e repasse do sistema.
 
@@ -86,16 +86,15 @@ O `EstoquePro` nao se posiciona, nesta versao, como ERP completo nem como plataf
 
 ## 6. Escopo funcional da versao atual
 
-### 6.1 Acesso, autenticacao e primeiro acesso
+### 6.1 Acesso, autenticacao e provisionamento inicial
 
 **Objetivo**
 
-Permitir o uso seguro do sistema desde a criacao do administrador inicial ate a manutencao da sessao autenticada.
+Permitir o uso seguro do sistema desde o provisionamento inicial do administrador pela equipe ate a manutencao da sessao autenticada.
 
 **O que esta no escopo**
 
-- consulta de `primeiro acesso` para verificar se ja existe administrador configurado;
-- criacao do administrador inicial quando o sistema ainda nao foi configurado;
+- configuracao do administrador principal por comando de manutencao do backend;
 - login com usuario e senha;
 - autenticacao baseada em JWT;
 - consulta do usuario autenticado;
@@ -103,7 +102,7 @@ Permitir o uso seguro do sistema desde a criacao do administrador inicial ate a 
 
 **Observacoes de escopo**
 
-- o fluxo de primeiro acesso so funciona quando nao existe administrador;
+- o administrador principal e provisionado pela equipe antes da entrega ao cliente;
 - a sessao do frontend e mantida em `localStorage`;
 - quase todos os recursos exigem autenticacao.
 
@@ -316,7 +315,7 @@ Aplicar identidade visual basica no frontend.
 As regras abaixo definem a fronteira mais importante do comportamento do sistema:
 
 1. O sistema deve manter exatamente um administrador principal ativo na operacao.
-2. O fluxo de primeiro acesso so pode criar administrador quando nenhum administrador existe.
+2. O sistema deve ser entregue com o administrador principal provisionado pela equipe responsavel.
 3. O estoque de uma variacao nunca pode ficar negativo.
 4. Toda venda validada deve gerar baixa automatica de estoque por item.
 5. O estoque baixo e calculado no nivel do produto, pela soma das variacoes.
@@ -410,7 +409,7 @@ Os itens abaixo nao devem ser apresentados como funcionalidades entregues pelo s
 
 Considera-se que o escopo atual atende seu objetivo quando:
 
-- a empresa consegue configurar o administrador inicial e autenticar usuarios;
+- a empresa consegue acessar o sistema com o administrador principal provisionado e autenticar usuarios;
 - produtos, fornecedores e usuarios podem ser mantidos conforme o perfil de acesso;
 - a operacao consegue registrar entradas e saidas sem permitir saldo negativo;
 - as vendas sao registradas com baixa automatica no estoque;

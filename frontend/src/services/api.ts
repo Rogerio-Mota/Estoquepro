@@ -1,5 +1,5 @@
 const API_BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
+  import.meta.env.VITE_API_URL || "/api"
 ).replace(/\/$/, "");
 
 type JsonRequestOptions = Omit<RequestInit, "body" | "headers"> & {
@@ -81,12 +81,27 @@ async function parseResponseBody(response: Response): Promise<any> {
   }
 }
 
+function looksLikeHtmlResponse(value: string) {
+  const trimmed = value.trim();
+
+  return (
+    /<!doctype html|<html[\s>]|<body[\s>]|<head[\s>]/i.test(trimmed) ||
+    (trimmed.startsWith("<") &&
+      /<\/?[a-z][\s\S]*>/i.test(trimmed) &&
+      trimmed.length > 120)
+  );
+}
+
 export function buildApiErrorMessage(payload: any, fallback = "Ocorreu um erro.") {
   if (!payload) {
     return fallback;
   }
 
   if (typeof payload === "string") {
+    if (looksLikeHtmlResponse(payload)) {
+      return fallback;
+    }
+
     return payload;
   }
 

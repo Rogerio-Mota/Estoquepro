@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('app', '0013_remove_configuracaosistema_backup_fields'),
+        ('app', '0010_produto_cest_produto_cfop_produto_codigo_barras_and_more'),
     ]
 
     operations = [

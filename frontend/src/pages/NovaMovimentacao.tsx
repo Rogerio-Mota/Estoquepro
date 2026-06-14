@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -21,6 +21,20 @@ function buildVariacaoOptionLabel(variacao) {
   ]
     .filter(Boolean)
     .join(" | ");
+}
+
+function buildVariacaoResumo(variacao) {
+  if (!variacao) {
+    return "Selecione uma variação para conferir os detalhes.";
+  }
+
+  return [
+    variacao.cor ? `Cor ${variacao.cor}` : null,
+    variacao.tamanho ? `Tamanho ${variacao.tamanho}` : null,
+    variacao.numeracao ? `Numeração ${variacao.numeracao}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ") || "Variação sem cor, tamanho ou numeração complementar.";
 }
 
 export default function NovaMovimentacao() {
@@ -55,6 +69,29 @@ export default function NovaMovimentacao() {
 
     carregarDados();
   }, []);
+
+  const variacoesOrdenadas = useMemo(() => {
+    return [...variacoes].sort((first, second) =>
+      buildVariacaoOptionLabel(first).localeCompare(
+        buildVariacaoOptionLabel(second),
+        "pt-BR",
+      ),
+    );
+  }, [variacoes]);
+
+  const variacaoSelecionada = useMemo(() => {
+    return variacoes.find(
+      (variacao) => String(variacao.id) === String(form.variacao),
+    ) || null;
+  }, [form.variacao, variacoes]);
+
+  const saldoDisponivel = Number(variacaoSelecionada?.saldo_atual || 0);
+  const quantidadeInformada = Number(form.quantidade || 0);
+  const saidaAcimaSaldo = Boolean(
+    form.tipo === "saida" &&
+    variacaoSelecionada &&
+    quantidadeInformada > saldoDisponivel,
+  );
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -108,7 +145,10 @@ export default function NovaMovimentacao() {
   return (
     <Layout title="Nova movimentação">
       <div className="form-shell">
-        <PageHeader title="Nova movimentação" />
+        <PageHeader
+          title="Nova movimentação"
+          description="Escolha a variação, confira o tamanho ou a numeração e informe a quantidade que realmente será movimentada."
+        />
 
         {erro ? <div className="alert-error">{erro}</div> : null}
 
@@ -117,7 +157,7 @@ export default function NovaMovimentacao() {
             <h3 className="section-title">Movimentação</h3>
             <div className="form-grid">
               <div style={{ gridColumn: "1 / -1" }}>
-                <label className="form-label">Variação</label>
+                <label className="form-label">Produto / variação</label>
                 {variacoes.length === 0 ? (
                   <EmptyState>Nenhuma variação cadastrada.</EmptyState>
                 ) : (
@@ -128,14 +168,67 @@ export default function NovaMovimentacao() {
                     required
                   >
                     <option value="">Selecione</option>
-                    {variacoes.map((variacao) => (
+                    {variacoesOrdenadas.map((variacao) => (
                       <option key={variacao.id} value={variacao.id}>
                         {buildVariacaoOptionLabel(variacao)}
                       </option>
                     ))}
                   </select>
                 )}
+                <p className="form-helper-text movement-select-note">
+                  Escolha a variação exata do produto para revisar cor, tamanho,
+                  numeração e saldo antes de lançar a movimentação.
+                </p>
               </div>
+
+              {variacaoSelecionada ? (
+                <div className="movement-preview-grid" style={{ gridColumn: "1 / -1" }}>
+                  <article className="movement-preview-card">
+                    <span className="movement-preview-card__label">Produto</span>
+                    <strong className="movement-preview-card__value">
+                      {variacaoSelecionada.produto_nome}
+                    </strong>
+                    <p className="table-cell-meta">
+                      SKU {variacaoSelecionada.produto_sku || "-"}
+                    </p>
+                  </article>
+
+                  <article className="movement-preview-card">
+                    <span className="movement-preview-card__label">
+                      Tamanho / numeração
+                    </span>
+                    <strong className="movement-preview-card__value">
+                      {variacaoSelecionada.tamanho || variacaoSelecionada.numeracao
+                        ? [
+                            variacaoSelecionada.tamanho
+                              ? `Tam. ${variacaoSelecionada.tamanho}`
+                              : null,
+                            variacaoSelecionada.numeracao
+                              ? `Num. ${variacaoSelecionada.numeracao}`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" | ")
+                        : "Sem grade complementar"}
+                    </strong>
+                    <p className="table-cell-meta">
+                      {buildVariacaoResumo(variacaoSelecionada)}
+                    </p>
+                  </article>
+
+                  <article className="movement-preview-card">
+                    <span className="movement-preview-card__label">Saldo atual</span>
+                    <strong className="movement-preview-card__value">
+                      {saldoDisponivel} unidade(s)
+                    </strong>
+                    <p className="table-cell-meta">
+                      {form.tipo === "saida"
+                        ? "Use esse valor para evitar retirar mais itens do que o disponível."
+                        : "Referência rápida para comparar a movimentação com o estoque atual."}
+                    </p>
+                  </article>
+                </div>
+              ) : null}
 
               <div>
                 <label className="form-label">Tipo</label>
@@ -152,15 +245,26 @@ export default function NovaMovimentacao() {
               </div>
 
               <div>
-                <label className="form-label">Quantidade</label>
+                <label className="form-label">Quantidade de peças</label>
                 <input
                   name="quantidade"
                   type="number"
+                  inputMode="numeric"
                   min="1"
+                  placeholder="Ex.: 12"
                   value={form.quantidade}
                   onChange={handleChange}
                   required
                 />
+                <p className="form-helper-text">
+                  Informe quantas unidades serão {form.tipo === "entrada" ? "adicionadas" : "movimentadas"} nesta operação.
+                </p>
+                {saidaAcimaSaldo ? (
+                  <p className="alert-error sales-inline-error movement-inline-warning">
+                    A saída informada está acima do saldo disponível para essa
+                    variação.
+                  </p>
+                ) : null}
               </div>
 
               {form.tipo === "entrada" ? (
@@ -214,7 +318,11 @@ export default function NovaMovimentacao() {
             >
               Cancelar
             </button>
-            <button type="submit" className="button-primary" disabled={salvando}>
+            <button
+              type="submit"
+              className="button-primary"
+              disabled={salvando || saidaAcimaSaldo}
+            >
               {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>

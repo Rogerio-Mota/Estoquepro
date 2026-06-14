@@ -2,17 +2,20 @@
 
 ## Equipe de Desenvolvimento
 
-- **Carinne da Silva Borges - Lider do projeto / Documentacao e Levantamento de Requisitos**
-  Responsavel pela documentacao do projeto e pelo levantamento de requisitos, atuando na organizacao das informacoes, na consolidacao das necessidades do sistema e no apoio a definicao das funcionalidades principais.
+- **Carinne da Silva Borges - Lider do projeto / Documentacao, Requisitos e Organizacao Funcional**
+  Responsavel pelo levantamento de requisitos, documentacao do projeto, organizacao das informacoes, definicao do escopo funcional e acompanhamento das necessidades do sistema.
 
-- **Rogerio Mota de Melo - Vice-lider / Back-end e Banco de Dados**
-  Responsavel pela estruturacao da logica do sistema, pela modelagem e manutencao do banco de dados, pela integracao com a aplicacao e pelo suporte tecnico as funcionalidades implementadas no projeto.
+- **Rogerio Mota de Melo - Vice-lider / Back-end, Banco de Dados e Regras de Negocio**
+  Responsavel pela modelagem e manutencao do banco de dados, desenvolvimento da API, implementacao das regras de negocio, integracao com o frontend e suporte tecnico das funcionalidades principais.
 
-- **Julio Cesar Lima dos Reis - Desenvolvimento Front-end**
-  Responsavel pelo desenvolvimento da interface do usuario, contribuindo para a implementacao das telas, a organizacao visual dos componentes e a integracao da experiencia de uso com as funcionalidades do sistema.
+- **Julio Cesar Lima dos Reis - Desenvolvimento Front-end e Integracao**
+  Responsavel pela implementacao das telas, integracao do frontend com a API, organizacao dos componentes e apoio na construcao da experiencia de uso do sistema.
 
-- **Joao Pedro Strasser Santos - Desenvolvimento Front-end e Design**
-  Responsavel pelas atividades de front-end e design do projeto, atuando na construcao visual das telas, na melhoria da usabilidade, na padronizacao da identidade visual e no fortalecimento da experiencia do usuario.
+- **Joao Pedro Strasser Santos - Front-end, Design e Usabilidade**
+  Responsavel pelo design das interfaces, padronizacao visual, melhoria da usabilidade, identidade visual do sistema e apoio na construcao das telas do frontend.
+
+- **Validacao e testes**
+  Realizados em conjunto pela equipe durante a evolucao das funcionalidades e verificacao dos fluxos principais do sistema.
 
 Sistema web de controle de estoque e vendas com backend em Django REST Framework e frontend em React + Vite.
 
@@ -31,7 +34,7 @@ O sistema permite hoje:
 - acompanhar relatorios de vendas por periodo;
 - gerenciar fornecedores;
 - gerenciar usuarios com perfis `admin` e `funcionario`;
-- provisionar o administrador principal por comando de manutencao, com opcao de liberar `primeiro acesso` publico quando necessario.
+- provisionar o administrador principal por comando de manutencao, antes da entrega ao cliente.
 
 ## Stack utilizada
 
@@ -75,7 +78,6 @@ PROJETO_MVP/
 |   |   |-- tests.py
 |   |   |-- urls.py
 |   |   |-- views.py
-|   |-- backups/
 |   |-- config/
 |   |-- manage.py
 |   |-- requirements.txt
@@ -114,7 +116,7 @@ PROJETO_MVP/
 ```
 
 > Importante: o `package.json` da raiz agora centraliza atalhos para frontend e backend, enquanto o codigo real continua em `frontend/` e `backend/`.
-> Diretorios como `backend/media/`, `backend/staticfiles/`, `backend/backups/` e `backend/tmp-test-runs/` sao artefatos locais e ficam fora da estrutura principal do codigo.
+> Diretorios como `backend/media/`, `backend/staticfiles/` e `backend/tmp-test-runs/` sao artefatos locais e ficam fora da estrutura principal do codigo.
 
 ## Requisitos
 
@@ -175,7 +177,6 @@ Exemplo minimo de `backend/.env`:
 ```env
 DJANGO_SECRET_KEY=sua-chave-unica-aqui
 DJANGO_DEBUG=true
-ENABLE_PUBLIC_FIRST_ACCESS=false
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 DJANGO_CORS_ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
 POSTGRES_DB=estoquepro
@@ -209,7 +210,8 @@ npm run dev
 Exemplo de `frontend/.env`:
 
 ```env
-VITE_API_URL=http://127.0.0.1:8000/api
+VITE_API_URL=/api
+DEV_PROXY_TARGET=http://127.0.0.1:8000
 ```
 
 ### 5. Acessos locais
@@ -218,11 +220,11 @@ VITE_API_URL=http://127.0.0.1:8000/api
 - Backend/API: `http://127.0.0.1:8000/api`
 - Admin Django: `http://127.0.0.1:8000/admin`
 
-### 6. Primeiro acesso
+### 6. Provisionamento do administrador
 
-- por padrao, a criacao do administrador principal e feita no backend com `python manage.py configurar_admin_principal --username admin`;
+- a criacao do administrador principal deve ser feita pela equipe no backend com `python manage.py configurar_admin_principal --username admin`;
 - o comando pede a senha no terminal e tambem aceita `--password` para automacao;
-- se quiser liberar a criacao publica pela tela de login, defina `ENABLE_PUBLIC_FIRST_ACCESS=true` no `backend/.env`.
+- o cliente deve receber um usuario ja provisionado pela equipe, sem fluxo publico de cadastro inicial pela interface.
 
 ## Como executar o projeto depois do setup
 
@@ -249,7 +251,6 @@ npm run dev
 | --- | --- | --- |
 | `DJANGO_SECRET_KEY` | Chave secreta do Django | obrigatoria, sem padrao utilizavel |
 | `DJANGO_DEBUG` | Ativa modo debug | `false` |
-| `ENABLE_PUBLIC_FIRST_ACCESS` | Libera a criacao publica do admin inicial pela tela de login | `false` |
 | `DJANGO_ALLOWED_HOSTS` | Hosts permitidos | `127.0.0.1,localhost` |
 | `DJANGO_CORS_ALLOWED_ORIGINS` | Origens permitidas para o frontend | `http://127.0.0.1:5173,http://localhost:5173` |
 | `DATABASE_URL` | URL completa do PostgreSQL | vazio |
@@ -265,21 +266,84 @@ npm run dev
 
 | Variavel | Descricao | Padrao |
 | --- | --- | --- |
-| `VITE_API_URL` | URL base da API | `http://127.0.0.1:8000/api` |
+| `VITE_API_URL` | URL base da API | `/api` |
+| `DEV_PROXY_TARGET` | URL do backend usada pelo proxy local do Vite | `http://127.0.0.1:8000` |
 
 O backend usa PostgreSQL. Configure `DATABASE_URL` ou os campos `POSTGRES_*` antes de iniciar a aplicacao. Se `DJANGO_SECRET_KEY` continuar com o placeholder do `.env.example`, o backend nao inicia.
+
+## Deploy gratuito recomendado
+
+Para esta stack, o caminho mais simples e estavel hoje e:
+
+- frontend no `Vercel`;
+- backend Django no `Render`;
+- banco PostgreSQL no `Neon`.
+
+Arquivos preparados no repositorio:
+
+- `render.yaml`: blueprint do backend para o Render;
+- `backend/build.sh`: instala dependencias e executa `collectstatic`;
+- `backend/start.sh`: aplica migracoes, garante o admin inicial quando as variaveis estiverem definidas e sobe o `gunicorn`;
+- `frontend/vercel.json`: reescrita para o React Router funcionar em rotas como `/produtos` e `/pedidos`.
+
+### Backend no Render
+
+1. Crie um banco PostgreSQL no Neon e copie a `DATABASE_URL`.
+2. No Render, crie o servico a partir deste repositorio usando o `render.yaml`.
+3. Preencha estas variaveis no servico:
+
+```env
+DJANGO_SECRET_KEY=sua-chave-forte
+DJANGO_DEBUG=false
+DJANGO_ALLOWED_HOSTS=seu-backend.onrender.com
+DJANGO_CORS_ALLOWED_ORIGINS=https://seu-frontend.vercel.app
+DJANGO_CSRF_TRUSTED_ORIGINS=https://seu-frontend.vercel.app,https://seu-backend.onrender.com
+DJANGO_SERVE_STATIC=true
+DJANGO_SERVE_MEDIA=true
+DATABASE_URL=postgresql://...
+DJANGO_ADMIN_USERNAME=admin
+DJANGO_ADMIN_PASSWORD=uma-senha-forte
+```
+
+Observacoes:
+
+- `DJANGO_ADMIN_USERNAME` e `DJANGO_ADMIN_PASSWORD` sao opcionais, mas ajudam a criar o administrador principal automaticamente no primeiro boot;
+- o comando automatico nao sobrescreve administradores existentes;
+- `DJANGO_SERVE_MEDIA=true` serve para demonstracao, mas arquivos enviados ficam no disco da instancia.
+
+### Frontend no Vercel
+
+1. Importe o projeto no Vercel.
+2. Configure o `Root Directory` como `frontend`.
+3. Defina a variavel:
+
+```env
+VITE_API_URL=https://seu-backend.onrender.com/api
+```
+
+4. Execute o deploy.
+
+### Limitacoes do plano gratuito
+
+- o Render free pode entrar em modo de repouso apos um periodo sem acesso;
+- o disco do Render nao e persistente para arquivos de usuario, entao logo e outros uploads podem ser perdidos em novo deploy ou reinicio;
+- para uso real com uploads, prefira um storage externo como Supabase Storage ou Cloudinary.
 
 ## Perfis de acesso
 
 - `admin`: acesso administrativo, incluindo usuarios, fornecedores, produtos e variacoes;
 - `funcionario`: operacao do estoque, vendas, relatorios e consultas permitidas.
 
+Observacoes sobre usuarios administrativos:
+
+- o administrador principal continua sendo provisionado e transferido pela equipe via comando `configurar_admin_principal`;
+- administradores autenticados podem cadastrar outros usuarios com perfil `admin` pela interface;
+- administradores adicionais possuem acesso administrativo ao sistema, sem substituir automaticamente o administrador principal.
+
 ## Principais rotas da API
 
 ### Autenticacao e sessao
 
-- `GET /api/primeiro-acesso/`
-- `POST /api/primeiro-acesso/`
 - `POST /api/token/`
 - `POST /api/token/refresh/`
 - `GET /api/usuario-logado/`
@@ -358,7 +422,7 @@ npm run check:backend
 - arquivos enviados pelo sistema, como media do Django, ficam em `backend/media/`;
 - em desenvolvimento, o backend expoe arquivos de media automaticamente quando `DEBUG=True`;
 - o frontend usa JWT e guarda a sessao no `localStorage`;
-- a manutencao do administrador principal deve ser feita pelo comando `configurar_admin_principal`, e nao pela tela publica;
+- a manutencao do administrador principal deve ser feita pela equipe via comando `configurar_admin_principal`;
 - a identidade visual exibida no frontend usa os defaults definidos em `frontend/src/utils/branding.ts`, sem endpoint de configuracao persistida nesta versao.
 
 ## Proximos passos sugeridos

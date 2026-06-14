@@ -17,7 +17,7 @@
         format json
     }
 
-    rewrite /health /*
+    respond /health 200
 
     root * dist
     encode gzip

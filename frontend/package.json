@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:public": "set \"__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=.trycloudflare.com\" && vite --host 0.0.0.0 --port 5173 --strictPort",
     "build": "vite build",
     "type-check": "tsc -b",
     "lint": "eslint .",

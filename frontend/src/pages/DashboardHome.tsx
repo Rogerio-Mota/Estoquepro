@@ -4,12 +4,11 @@ import { toast } from "react-toastify";
 
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import Layout from "@/components/layout/Layout";
+import PageHeader from "@/components/layout/PageHeader";
 import VariationsPreview from "@/components/products/VariationsPreview";
-import useAuth from "@/hooks/useAuth";
 import { authJsonRequest, extractCollection } from "@/services/api";
 
 export default function DashboardHome() {
-  const { user } = useAuth();
   const [produtos, setProdutos] = useState([]);
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [estoqueBaixo, setEstoqueBaixo] = useState([]);
@@ -72,12 +71,32 @@ export default function DashboardHome() {
     }, 0);
   }, [movimentacoes]);
 
-  const rotaProduto = user?.tipo === "admin" ? "/novo-produto" : "/estoque-baixo";
-  const rotuloProduto = user?.tipo === "admin" ? "Novo produto" : "Estoque baixo";
-
   return (
     <Layout title="Painel">
       <div className="dashboard-home">
+        <PageHeader
+          title="Painel"
+          description="Acompanhe o resumo do estoque e acesse os lançamentos mais usados do sistema."
+          action={(
+            <>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => navigate("/nova-movimentacao")}
+              >
+                Nova movimentação
+              </button>
+              <button
+                type="button"
+                className="button-primary"
+                onClick={() => navigate("/novo-pedido")}
+              >
+                Nova venda
+              </button>
+            </>
+          )}
+        />
+
         <div className="summary-grid dashboard-home__summary">
           <SummaryCard
             title="Produtos"
@@ -98,28 +117,6 @@ export default function DashboardHome() {
             caption="Últimos 7 dias"
           />
         </div>
-
-        <section className="page-card section-card">
-          <div className="section-header-inline">
-            <h3 className="section-title">Atalhos</h3>
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => navigate("/nova-movimentacao")}
-              >
-                Nova movimentação
-              </button>
-              <button
-                type="button"
-                className="button-primary"
-                onClick={() => navigate(rotaProduto)}
-              >
-                {rotuloProduto}
-              </button>
-            </div>
-          </div>
-        </section>
 
         <div className="dashboard-home__content">
           <section className="page-card table-card dashboard-home__table-card">

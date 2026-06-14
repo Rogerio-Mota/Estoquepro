@@ -11,6 +11,7 @@ Para documentacao completa do sistema, arquitetura, setup do backend, rotas prin
 ```powershell
 npm install
 npm run dev
+npm run dev:public
 npm run lint
 npm run build
 ```

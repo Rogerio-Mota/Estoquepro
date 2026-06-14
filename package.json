@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev:frontend": "npm --prefix frontend run dev",
+    "dev:frontend:public": "npm --prefix frontend run dev:public",
     "build:frontend": "npm --prefix frontend run build",
     "lint:frontend": "npm --prefix frontend run lint",
     "type-check:frontend": "npm --prefix frontend run type-check",

@@ -139,6 +139,21 @@ export default function PedidoFormPage() {
     });
   }, [form.cliente_nome, form.itens, variacoesPorId]);
 
+  const checklistItems = [
+    {
+      done: Boolean(form.cliente_nome.trim()),
+      label: "Cliente identificado",
+    },
+    {
+      done: itensCompletos === form.itens.length,
+      label: "Todos os itens preenchidos",
+    },
+    {
+      done: vendaProntaParaSalvar,
+      label: "Venda pronta para salvar",
+    },
+  ];
+
   function atualizarCampo(event) {
     setForm((prevState) => ({
       ...prevState,
@@ -544,21 +559,19 @@ export default function PedidoFormPage() {
             </div>
 
             <div className="sales-checklist">
-              <div
-                className={`sales-checkpoint ${form.cliente_nome.trim() ? "sales-checkpoint--done" : "sales-checkpoint--pending"}`}
-              >
-                Cliente identificado
-              </div>
-              <div
-                className={`sales-checkpoint ${itensCompletos === form.itens.length ? "sales-checkpoint--done" : "sales-checkpoint--pending"}`}
-              >
-                Todos os itens preenchidos
-              </div>
-              <div
-                className={`sales-checkpoint ${vendaProntaParaSalvar ? "sales-checkpoint--done" : "sales-checkpoint--pending"}`}
-              >
-                Venda pronta para salvar
-              </div>
+              {checklistItems.map((item) => (
+                <div
+                  key={item.label}
+                  className={`sales-checkpoint ${
+                    item.done ? "sales-checkpoint--done" : "sales-checkpoint--pending"
+                  }`}
+                >
+                  <span className="sales-checkpoint__icon" aria-hidden="true">
+                    {item.done ? "✅" : "⬜"}
+                  </span>
+                  <span className="sales-checkpoint__text">{item.label}</span>
+                </div>
+              ))}
             </div>
 
             <div className="sales-sidebar__actions">

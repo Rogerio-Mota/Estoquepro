@@ -619,12 +619,10 @@ textarea:focus {
   display: flex;
   gap: 1rem;
   margin-bottom: 20px;
-  max-height: 92px;
   min-height: 58px;
-  overflow: auto;
   padding: 0.8rem 0.95rem;
   position: sticky;
-  scrollbar-gutter: stable;
+  overflow: visible;
   top: calc(var(--app-header-offset) - 18px);
   z-index: 18;
 }
@@ -715,12 +713,11 @@ textarea:focus {
     0 18px 34px color-mix(in srgb, var(--primary-dark) 10%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.78);
   border-radius: 18px;
-  max-height: 172px;
-  overflow: hidden;
-  overflow-y: auto;
+  max-height: none;
+  min-width: 0;
+  overflow: visible;
   padding: 0.9rem 1rem;
   position: relative;
-  scrollbar-gutter: stable;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -780,7 +777,12 @@ textarea:focus {
 }
 
 .summary-card__value {
+  display: block;
   font-size: clamp(1.9rem, 2.4vw, 2.4rem);
+  line-height: 1.08;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .summary-card__caption {
@@ -794,10 +796,9 @@ textarea:focus {
 .table-card,
 .form-card,
 .notice-card {
-  max-height: var(--card-compact-max-height);
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
   padding: var(--card-compact-padding);
-  scrollbar-gutter: stable;
 }
 
 .section-title {
@@ -819,10 +820,10 @@ textarea:focus {
 }
 
 .table-wrapper {
-  max-height: var(--table-scroll-max-height);
-  overflow: auto;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
   position: relative;
-  scrollbar-gutter: stable both-edges;
   width: 100%;
 }
 
@@ -979,6 +980,13 @@ textarea:focus {
   flex-wrap: wrap;
   gap: 12px;
   justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.form-helper-text {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
   margin-top: 8px;
 }
 
@@ -1455,9 +1463,9 @@ textarea:focus {
   box-shadow: none;
   display: grid;
   gap: 0.35rem;
-  max-height: 112px;
+  max-height: none;
   min-height: 112px;
-  overflow: hidden;
+  overflow: visible;
   padding: 0.7rem 0.9rem;
 }
 
@@ -1532,10 +1540,9 @@ textarea:focus {
   border-radius: 18px;
   display: grid;
   gap: 0.35rem;
-  max-height: 132px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
   padding: 12px 14px;
-  scrollbar-gutter: stable;
 }
 
 .dashboard-home__mini-card span {
@@ -2073,6 +2080,42 @@ textarea:focus {
   display: none;
 }
 
+.movement-select-note {
+  max-width: 72ch;
+}
+
+.movement-preview-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.movement-preview-card {
+  background: color-mix(in srgb, var(--surface-strong) 94%, var(--primary) 6%);
+  border: 1px solid color-mix(in srgb, var(--primary) 10%, var(--border));
+  border-radius: 18px;
+  display: grid;
+  gap: 0.35rem;
+  padding: 14px 16px;
+}
+
+.movement-preview-card__label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.movement-preview-card__value {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.movement-inline-warning {
+  margin-bottom: 0;
+}
+
 .sales-page {
   display: grid;
   gap: 20px;
@@ -2084,6 +2127,12 @@ textarea:focus {
 
 .sales-page__summary {
   margin-bottom: 0;
+}
+
+.sales-page .summary-card {
+  max-height: none;
+  min-width: 0;
+  overflow: visible;
 }
 
 .sales-eyebrow {
@@ -2144,9 +2193,8 @@ textarea:focus {
 }
 
 .sales-table-card {
-  max-height: var(--card-compact-max-height);
-  overflow: auto;
-  scrollbar-gutter: stable;
+  max-height: none;
+  overflow: visible;
 }
 
 .sales-composer {
@@ -2159,10 +2207,9 @@ textarea:focus {
 .sales-form-card {
   display: grid;
   gap: 22px;
-  max-height: var(--card-compact-max-height);
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
   padding: 18px;
-  scrollbar-gutter: stable;
 }
 
 .sales-form-intro {
@@ -2185,6 +2232,10 @@ textarea:focus {
   margin-bottom: 18px;
 }
 
+.sales-form-intro__head > * {
+  min-width: 0;
+}
+
 .sales-section__subtitle {
   margin-bottom: 0;
   max-width: 60ch;
@@ -2197,7 +2248,7 @@ textarea:focus {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
   display: grid;
   gap: 0.3rem;
-  min-width: 230px;
+  min-width: min(230px, 100%);
   padding: 16px 18px;
 }
 
@@ -2210,8 +2261,12 @@ textarea:focus {
 }
 
 .sales-total-preview__value {
+  display: block;
   font-size: clamp(1.45rem, 2vw, 1.9rem);
   line-height: 1.05;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .sales-total-preview__caption {
@@ -2363,6 +2418,7 @@ textarea:focus {
   border-radius: 18px;
   display: grid;
   gap: 0.35rem;
+  min-width: 0;
   padding: 14px 16px;
 }
 
@@ -2383,8 +2439,12 @@ textarea:focus {
 }
 
 .sales-sidebar__value {
+  display: block;
   font-size: 1rem;
   line-height: 1.45;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .sales-checklist {
@@ -2393,10 +2453,25 @@ textarea:focus {
 }
 
 .sales-checkpoint {
+  align-items: center;
   border: 1px solid var(--border);
   border-radius: 16px;
+  display: flex;
+  gap: 10px;
   font-weight: 700;
   padding: 12px 14px;
+}
+
+.sales-checkpoint__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 1rem;
+  justify-content: center;
+  width: 1.2rem;
+}
+
+.sales-checkpoint__text {
+  min-width: 0;
 }
 
 .sales-checkpoint--done {
@@ -2804,6 +2879,14 @@ textarea:focus {
     padding: 16px;
   }
 
+  .site-header__bar::before,
+  .page-card::before,
+  .highlight-panel::before,
+  .metric-card::before,
+  .info-card::before {
+    display: none;
+  }
+
   .dashboard-home .section-header-inline > div {
     width: 100%;
   }
@@ -2831,14 +2914,6 @@ textarea:focus {
   .login-page__logo {
     height: 64px;
     width: 64px;
-  }
-
-  .site-header__bar::before,
-  .page-card::before,
-  .highlight-panel::before,
-  .metric-card::before,
-  .info-card::before {
-    display: none;
   }
 
   .settings-page .section-header-inline,

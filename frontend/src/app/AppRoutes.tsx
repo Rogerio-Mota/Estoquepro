@@ -17,14 +17,12 @@ import NovoProduto from "@/pages/NovoProduto";
 import NovoUsuario from "@/pages/NovoUsuario";
 import PedidoFormPage from "@/pages/PedidoFormPage";
 import PedidosPage from "@/pages/PedidosPage";
-import PrimeiroAcessoPage from "@/pages/PrimeiroAcessoPage";
 import ProdutosPage from "@/pages/ProdutosPage";
 import RelatoriosPage from "@/pages/RelatoriosPage";
 import UsuariosPage from "@/pages/UsuariosPage";
 
 const publicRoutes = [
   { path: "/login", element: <Login /> },
-  { path: "/primeiro-acesso", element: <PrimeiroAcessoPage /> },
 ];
 
 const protectedRoutes = [

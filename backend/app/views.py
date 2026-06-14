@@ -1,10 +1,12 @@
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import F, IntegerField, Sum
+from django.db.models.deletion import ProtectedError
 from django.db.models.functions import Coalesce
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -32,6 +34,12 @@ def _raise_drf_validation(error):
     if hasattr(error, "message_dict"):
         raise ValidationError(error.message_dict)
     raise ValidationError(error.messages)
+
+
+def _raise_delete_dependency_error(entity_name):
+    raise ValidationError(
+        f"Nao e possivel excluir este {entity_name} porque ele ja esta vinculado ao historico de vendas."
+    )
 
 
 def _usuario_eh_admin(user):
@@ -79,6 +87,14 @@ class UsuarioLogadoView(APIView):
     def get(self, request):
         serializer = UsuarioLogadoSerializer(request.user)
         return Response(serializer.data)
+
+
+class HealthcheckView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({"status": "ok"})
 
 
 class BaseMovimentacaoEstoqueView(APIView):
@@ -161,6 +177,16 @@ class ProdutoViewSet(viewsets.ModelViewSet):
     search_fields = ["nome", "marca", "sku"]
     ordering_fields = ["nome", "preco_venda", "estoque_minimo", "criado_em"]
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        try:
+            self.perform_destroy(instance)
+        except ProtectedError:
+            _raise_delete_dependency_error("produto")
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=False, methods=["get"], url_path="estoque-baixo")
     def estoque_baixo(self, request):
         queryset = (
@@ -195,6 +221,16 @@ class VariacaoViewSet(viewsets.ModelViewSet):
     ]
     search_fields = ["produto__nome", "produto__marca", "produto__sku", "cor"]
     ordering_fields = ["saldo_atual", "criado_em"]
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        try:
+            self.perform_destroy(instance)
+        except ProtectedError:
+            _raise_delete_dependency_error("variacao")
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MovimentacaoViewSet(viewsets.ReadOnlyModelViewSet):
