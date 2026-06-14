@@ -271,63 +271,15 @@ npm run dev
 
 O backend usa PostgreSQL. Configure `DATABASE_URL` ou os campos `POSTGRES_*` antes de iniciar a aplicacao. Se `DJANGO_SECRET_KEY` continuar com o placeholder do `.env.example`, o backend nao inicia.
 
-## Deploy gratuito recomendado
+## Publicacao
 
-Para esta stack, o caminho mais simples e estavel hoje e:
+Este repositorio nao mantem configuracao versionada de Docker nem blueprint de deploy.
 
-- frontend no `Vercel`;
-- backend Django no `Render`;
-- banco PostgreSQL no `Neon`.
+Se a equipe quiser publicar o sistema depois, basta configurar:
 
-Arquivos preparados no repositorio:
-
-- `render.yaml`: blueprint do backend para o Render;
-- `backend/build.sh`: instala dependencias e executa `collectstatic`;
-- `backend/start.sh`: aplica migracoes, garante o admin inicial quando as variaveis estiverem definidas e sobe o `gunicorn`;
-- `frontend/vercel.json`: reescrita para o React Router funcionar em rotas como `/produtos` e `/pedidos`.
-
-### Backend no Render
-
-1. Crie um banco PostgreSQL no Neon e copie a `DATABASE_URL`.
-2. No Render, crie o servico a partir deste repositorio usando o `render.yaml`.
-3. Preencha estas variaveis no servico:
-
-```env
-DJANGO_SECRET_KEY=sua-chave-forte
-DJANGO_DEBUG=false
-DJANGO_ALLOWED_HOSTS=seu-backend.onrender.com
-DJANGO_CORS_ALLOWED_ORIGINS=https://seu-frontend.vercel.app
-DJANGO_CSRF_TRUSTED_ORIGINS=https://seu-frontend.vercel.app,https://seu-backend.onrender.com
-DJANGO_SERVE_STATIC=true
-DJANGO_SERVE_MEDIA=true
-DATABASE_URL=postgresql://...
-DJANGO_ADMIN_USERNAME=admin
-DJANGO_ADMIN_PASSWORD=uma-senha-forte
-```
-
-Observacoes:
-
-- `DJANGO_ADMIN_USERNAME` e `DJANGO_ADMIN_PASSWORD` sao opcionais, mas ajudam a criar o administrador principal automaticamente no primeiro boot;
-- o comando automatico nao sobrescreve administradores existentes;
-- `DJANGO_SERVE_MEDIA=true` serve para demonstracao, mas arquivos enviados ficam no disco da instancia.
-
-### Frontend no Vercel
-
-1. Importe o projeto no Vercel.
-2. Configure o `Root Directory` como `frontend`.
-3. Defina a variavel:
-
-```env
-VITE_API_URL=https://seu-backend.onrender.com/api
-```
-
-4. Execute o deploy.
-
-### Limitacoes do plano gratuito
-
-- o Render free pode entrar em modo de repouso apos um periodo sem acesso;
-- o disco do Render nao e persistente para arquivos de usuario, entao logo e outros uploads podem ser perdidos em novo deploy ou reinicio;
-- para uso real com uploads, prefira um storage externo como Supabase Storage ou Cloudinary.
+- o backend Django em um ambiente com Python e PostgreSQL;
+- o frontend React/Vite em um host estatico;
+- as variaveis de ambiente conforme a secao anterior.
 
 ## Perfis de acesso
 
